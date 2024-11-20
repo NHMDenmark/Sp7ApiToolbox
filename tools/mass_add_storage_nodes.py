@@ -114,9 +114,13 @@ class MassAddStorageNodeTool(Sp7ApiTool):
         child_name = row[headers[index]]
         child_nodes = self.sp.getSpecifyObjects("storage", 1000, 0, {'fullname': child_name, 'parent': parent_id})
 
+        # Get current rank item 
+        rankid = StorageRank[headers[index]].value
+        rank = self.sp.getSpecifyObjects('storagetreedefitem', 15, 0, {"rankid": rankid})[0]
+        
         # If no corresponding child nodes found, proceed to add child node
         if len(child_nodes) == 0:
-            storage_node = self.createStorageNodeJson(child_name, child_name, parent_id, headers[index])
+            storage_node = self.createStorageNodeJson(child_name, child_name, parent_id, rank)
             child_node = self.sp.postSpecifyObject('storage', storage_node)
         else: 
             child_node = child_nodes[0]
@@ -139,22 +143,16 @@ class MassAddStorageNodeTool(Sp7ApiTool):
         return parent_nodes[0]['id']
 
 
-    def createStorageNodeJson(self, name, fullname, parent_id, rankname, ) -> str:
+    def createStorageNodeJson(self, name, fullname, parent_id, rank) -> str:
         """
         
         """
-
-        rankid = StorageRank[rankname].value
-
-        # Get storage tree item id for current rank
-        result = self.sp.getSpecifyObjects('storagetreedefitem', 15, 0, {"rankid": rankid})
-        itemid = result[0]['id']
-
+       
         node = {'fullname': fullname,
                 'name': name,
-                'rankid': rankid,
+                'rankid': rank['rankid'],
                 'parent': f'/api/specify/storage/{parent_id}/', 
-                'definitionitem':f'/api/specify/storagetreedefitem/{itemid}/'
+                'definitionitem':f'/api/specify/storagetreedefitem/{rank['id']}/'
             }
         
         return node
