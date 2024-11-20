@@ -39,6 +39,7 @@ class SpecifyInterface():
     """      
     self.spSession = requests.Session() 
     self.csrfToken = ''
+    self.verifySSL = False
 
   def getInitialCollections(self):
     """ 
@@ -47,7 +48,7 @@ class SpecifyInterface():
       RETURNS collections list (dictionary)
     """ 
     util.logger.debug('Get initial collections')
-    response = self.spSession.get(gs.baseURL + "context/login/", verify=False)
+    response = self.spSession.get(gs.baseURL + "context/login/", verify=self.verifySSL)
     util.logger.debug(' - Response: ' + str(response.status_code) + " " + response.reason)
     collections = json.loads(response.text)['collections'] # get collections from json string and convert into dictionary
     util.logger.debug(' - Received %d collection(s)' % len(collections))
@@ -63,7 +64,7 @@ class SpecifyInterface():
        Returns csrftoken (String)
     """   
     #util.logger.debug('Get CSRF token from ', gs.baseURL)
-    response = self.spSession.get(gs.baseURL + 'context/login/', verify=False)
+    response = self.spSession.get(gs.baseURL + 'context/login/', verify=self.verifySSL)
     self.csrfToken = response.cookies.get('csrftoken')
     util.logger.debug(' - Response: %s %s' %(str(response.status_code), response.reason))
     util.logger.debug(' - CSRF Token: %s' % self.csrfToken)
@@ -97,7 +98,7 @@ class SpecifyInterface():
     """
     util.logger.debug('Log in using CSRF token & username/password')
     headers = {'content-type': 'application/json', 'X-CSRFToken': csrftoken, 'Referer': gs.baseURL}
-    response = self.spSession.put(gs.baseURL + "context/login/", json={"username": username, "password": passwd, "collection": collectionid}, headers=headers, verify=False) 
+    response = self.spSession.put(gs.baseURL + "context/login/", json={"username": username, "password": passwd, "collection": collectionid}, headers=headers, verify=self.verifySSL) 
     
     if response.status_code > 299:
       csrftoken = ''
@@ -121,7 +122,7 @@ class SpecifyInterface():
     validity = None
 
     headers = {'content-type': 'application/json', 'X-CSRFToken': token, 'Referer': gs.baseURL}
-    response = self.spSession.get(gs.baseURL + "context/user.json", headers=headers)
+    response = self.spSession.get(gs.baseURL + "context/user.json", headers=headers, verify=self.verifySSL)
     
     if response.status_code > 299:
       validity = False 
@@ -176,7 +177,7 @@ class SpecifyInterface():
     for key in filters:
       filterString += f"&{key}={filters[key]}"
     apiCallString = f'{gs.baseURL}api/specify/{objectName}/?limit={limit}&offset={offset}{filterString}'
-    response = self.spSession.get(apiCallString, headers=headers)
+    response = self.spSession.get(apiCallString, headers=headers, verify=False)
     util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
     if response.status_code < 299:
       objectSet = json.loads(response.text)['objects'] # get collections from json string and convert into dictionary
@@ -242,14 +243,13 @@ class SpecifyInterface():
     headers = {'content-type': 'application/json', 'X-CSRFToken': self.csrfToken, 'referer': gs.baseURL}
     apiCallString = f"{gs.baseURL}api/specify/{objectName}/"
     util.logger.debug(apiCallString)
-    response = self.spSession.post(apiCallString, headers=headers, data=specifyObject)
+    response = self.spSession.post(apiCallString, headers=headers, json=specifyObject, verify=False)
     util.logger.debug(' - Response: %s %s' %(str(response.status_code), response.reason))
-    # if response.status_code < 299:
-    #   object = response.json()
-    # else: 
-    #  object = None
-    # return object 
-    return response.status_code 
+    if response.status_code < 299:
+       return response.json()
+    else: 
+      raise Exception(f"Response error: {response.status_code}")
+    #return response.status_code 
 
   def directAPIcall(self, callString):#, csrftoken):
     """ 
@@ -267,7 +267,8 @@ class SpecifyInterface():
     
     if response.status_code < 299:
       return json.loads(response.text)
-    return {} 
+    else:
+      raise Exception(f"Response error: {response.status_code}") 
 
   def logout(self):#, csrftoken):
     """ 

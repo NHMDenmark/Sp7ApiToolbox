@@ -9,7 +9,17 @@
   http://www.apache.org/licenses/LICENSE-2.0
   Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-  PURPOSE: Tool for merging storage nodes upwards towards their nearest parent 
+  PURPOSE: Tool for mass adding storage nodes based on data file with a column for each level.
+
+  The first column is supposed to represent the collection level. 
+  Subordinate child nodes are flexible as long as they correspond to the Specify levels. 
+  Please check enums.StorageRank for possible column names. 
+
+  Example data file format (csv): 
+  
+  Collection;Cabinet;Shelf
+  some collection; cabinet 1; shelf 1
+
 """
 
 import os
@@ -64,8 +74,8 @@ class MassAddStorageNodeTool(Sp7ApiTool):
         
         """
         # Check headers to see if these fit the expected file format
-        if len(headers) != 3:
-            raise Exception("Wrong header count. Expected: 3")
+        if len(headers) < 2:
+            raise Exception("Wrong header count. Expected: at least 2")
             #return False
         else:
             if headers[0] != "Collection": 
@@ -75,32 +85,59 @@ class MassAddStorageNodeTool(Sp7ApiTool):
                 return True
         
         #return False
-        
+       
 
     def addStorageLocation(self, headers, row):
         """
-        
+        Add storage location nodes recursively.
         """
 
-        #1. Get parent of storage node 
-        parent_id = ''
+        # Get parent of storage node 
         parent_name = row[headers[0]]
+        parent_id = self.getParentId(parent_name)
+                
+        if parent_id is None: 
+            raise Exception("Could not retrieve parent node!")        
+
+        # Start recursive addition of child nodes
+        self.addChildNodes(headers, row, parent_id, 1)
+        
+    def addChildNodes(self, headers, row, parent_id, index):
+        """
+        Recursively add child nodes.
+        """
+        # Exit recursion when last column reached
+        if index >= len(headers):
+            return
+
+        # Check if child node does not already exist 
+        child_name = row[headers[index]]
+        child_nodes = self.sp.getSpecifyObjects("storage", 1000, 0, {'fullname': child_name, 'parent': parent_id})
+
+        # If no corresponding child nodes found, proceed to add child node
+        if len(child_nodes) == 0:
+            storage_node = self.createStorageNodeJson(child_name, child_name, parent_id, headers[index])
+            child_node = self.sp.postSpecifyObject('storage', storage_node)
+        else: 
+            child_node = child_nodes[0]
+
+        # If there is a next column that represents a subordinate child node, add that recursively
+        if index < len(headers) - 1:
+            sub_child_name = row[headers[index + 1]]
+
+            # Recursively add any subordinate child node
+            self.addChildNodes(headers, row, child_node['id'], index + 1)
+
+    def getParentId(self, parent_name):
+        """
+        Retrieve the parent id for a given parent name
+        """
         parent_nodes = self.sp.getSpecifyObjects("storage", 100, 0, {'fullname': parent_name})
         if not parent_nodes:
-            raise Exception("Could not retrieve parent node!")
-        else:
-            parent_id = parent_nodes[0]['id']
+            return None
+        
+        return parent_nodes[0]['id']
 
-        #2. Check if child node does not already exist 
-        child_name = row[headers[1]]        
-        child_nodes = self.sp.getSpecifyObjects("storage", 1000, 0, {'fullname': child_name, 'parent': parent_id})
-        if len(child_nodes) == 0:
-            # Child node not present; Proceed to add child node
-            storage_node = self.createStorageNodeJson(child_name, child_name, parent_id, headers[1])
-            self.sp.postSpecifyObject('storage', storage_node)
-            pass
-
-        pass
 
     def createStorageNodeJson(self, name, fullname, parent_id, rankname, ) -> str:
         """
@@ -109,10 +146,15 @@ class MassAddStorageNodeTool(Sp7ApiTool):
 
         rankid = StorageRank[rankname].value
 
+        # Get storage tree item id for current rank
+        result = self.sp.getSpecifyObjects('storagetreedefitem', 15, 0, {"rankid": rankid})
+        itemid = result[0]['id']
+
         node = {'fullname': fullname,
                 'name': name,
                 'rankid': rankid,
-                'parent': f'/api/specify/storage/{parent_id}/'
+                'parent': f'/api/specify/storage/{parent_id}/', 
+                'definitionitem':f'/api/specify/storagetreedefitem/{itemid}/'
             }
         
         return node
