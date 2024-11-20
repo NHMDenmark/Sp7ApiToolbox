@@ -1,0 +1,9 @@
+{
+    "tools": 
+    [
+        {"name" :"Mass Add Storage Nodes",   "class" : "MassAddStorageNodeTool",   "module": "tools.mass_add_storage_nodes"},    
+        {"name" :"Collapse Storage Nodes",   "class" : "CollapseStorageNodesTool", "module": "tools.collapse_storage_nodes"},    
+        {"name" :"Merge duplicate taxa", "class" : "MergeDuplicateTaxaTool",   "module": "tools.merge_duplicate_taxa"},    
+        {"name" :"Import Taxon Synonyms", "class" : "ImportSynonymTool",   "module": "tools.import_synonyms"}
+    ]
+}
