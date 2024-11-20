@@ -39,7 +39,7 @@ class SpecifyInterface():
     """      
     self.spSession = requests.Session() 
     self.csrfToken = ''
-    self.verifySSL = False
+    self.verifySSL = True
 
   def getInitialCollections(self):
     """ 
