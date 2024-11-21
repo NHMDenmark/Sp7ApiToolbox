@@ -61,7 +61,7 @@ class Main():
 
     def selectDatafile(self):
         """
-        
+        Allow user interaction in CLI to select the data file for use by the tool. 
         """
 
         self.dataFiles = os.listdir("data")
@@ -80,7 +80,7 @@ class Main():
 
     def selectTool(self):
         """
-        
+        Allow user interaction in CLI to select the tool for operations. 
         """
 
         print("\nChoose your tool: ")
@@ -99,7 +99,11 @@ class Main():
    
     def loadConfiguration(self, mode):
         """
-        
+        Loads the main app configuration file depending on mode. 
+        If no mode name is specified, it will use the default config.json
+        If a mode name is passed as an argument, it will use the config.[mode].json
+        CONTRACT 
+            mode (String) : The name of the mode of operation 
         """
         if mode != "": mode = "." + mode
         with open(f"config{mode}.json", "r") as file:
@@ -126,6 +130,7 @@ class Main():
     def loadTools(self):
         """
         Load tools dynamically from a JSON configuration file.
+        The tools json must specify the name, class and module of the tool. 
         """
 
         self.toolKit = []
@@ -148,7 +153,7 @@ class Main():
 # Application execution entry point 
 if __name__ == "__main__":
     """
-    Initiate main class
+    Start main execution thread.
     """
 
     # Check if run mode parameter has been passed 

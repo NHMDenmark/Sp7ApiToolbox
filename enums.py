@@ -1,6 +1,9 @@
 from enum import Enum
 
 class StorageRank(Enum):
+    """
+    Storage names paired with rank ids as derived from a standard Specify setup
+    """
     Institution = 0 
     Collection = 150 
     Room = 200 

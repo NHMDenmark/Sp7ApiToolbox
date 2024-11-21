@@ -38,14 +38,18 @@ class MassAddStorageNodeTool(Sp7ApiTool):
     def __init__(self, specifyInterface: specify_interface.SpecifyInterface) -> None:
         """
         CONSTRUCTOR
-
+            specifyInterface (obj) : Dependency injection of API wrapper. 
         """
+
         super().__init__(specifyInterface)
 
     def runTool(self, args):
         """
-        
+        Execute the tool for operation. 
+        CONTRACT 
+            args (dict) : Must specify the filename of the data file 
         """
+
         filename = args.get('filename')
         if not filename:
             raise Exception("No filename provided in args.")
@@ -65,13 +69,14 @@ class MassAddStorageNodeTool(Sp7ApiTool):
 
     def validateRow(self, row) -> bool:
         """
+        Unfinished method for evaluating whether row format is valid. 
         """
         print(row)
         return True
 
     def validateHeaders(self, headers) -> bool:
         """
-        
+        Method for ensuring that the file format can be used by the tool.
         """
         # Check headers to see if these fit the expected file format
         if len(headers) < 2:
@@ -145,7 +150,7 @@ class MassAddStorageNodeTool(Sp7ApiTool):
 
     def createStorageNodeJson(self, name, fullname, parent_id, rank) -> str:
         """
-        
+        Creates json representation of the storage node to be posted to the API. 
         """
        
         node = {'fullname': fullname,
