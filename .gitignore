@@ -167,3 +167,4 @@ cython_debug/
 config.debug.json
 config.test.json
 config.live.json
+sandbox.py

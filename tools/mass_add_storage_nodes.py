@@ -28,6 +28,7 @@ import csv
 # Internal Dependencies 
 from tools.sp7api_tool import Sp7ApiTool
 import specify_interface
+from models.storage_node import StorageNode
 from enums import StorageRank
 
 class MassAddStorageNodeTool(Sp7ApiTool):
@@ -125,15 +126,13 @@ class MassAddStorageNodeTool(Sp7ApiTool):
         
         # If no corresponding child nodes found, proceed to add child node
         if len(child_nodes) == 0:
-            storage_node = self.createStorageNodeJson(child_name, child_name, parent_id, rank)
-            child_node = self.sp.postSpecifyObject('storage', storage_node)
+            storage_node = StorageNode(child_name, child_name, parent_id, rank['rankid'])
+            child_node = self.sp.postSpecifyObject('storage', storage_node.createJsonString())
         else: 
             child_node = child_nodes[0]
 
         # If there is a next column that represents a subordinate child node, add that recursively
         if index < len(headers) - 1:
-            sub_child_name = row[headers[index + 1]]
-
             # Recursively add any subordinate child node
             self.addChildNodes(headers, row, child_node['id'], index + 1)
 
@@ -146,21 +145,6 @@ class MassAddStorageNodeTool(Sp7ApiTool):
             return None
         
         return parent_nodes[0]['id']
-
-
-    def createStorageNodeJson(self, name, fullname, parent_id, rank) -> str:
-        """
-        Creates json representation of the storage node to be posted to the API. 
-        """
-       
-        node = {'fullname': fullname,
-                'name': name,
-                'rankid': rank['rankid'],
-                'parent': f'/api/specify/storage/{parent_id}/', 
-                'definitionitem':f'/api/specify/storagetreedefitem/{rank['id']}/'
-            }
-        
-        return node
 
     def __str__(self) -> str:
         """
