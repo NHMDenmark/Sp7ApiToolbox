@@ -20,7 +20,7 @@ class StorageNode():
     Class encapsulating storage tree node relevant methods 
     """
 
-    def __init__(self, name, fullname, parent_id, rank_id) -> None:
+    def __init__(self, name, fullname, parent_id, rank_id, treedefitemid) -> None:
         """
         Constructor
         CONTRACT 
@@ -31,8 +31,9 @@ class StorageNode():
         
         self.name = name
         self.fullname = fullname
-        self.parent_id = parent_id
         self.rank = StorageRank(rank_id).value
+        self.parent_id = parent_id
+        self.definitionitem = treedefitemid
         self.discipline = None
         self.collection = None
 
@@ -45,7 +46,7 @@ class StorageNode():
                 'name': self.name,
                 'rankid': self.rank,
                 'parent': f'/api/specify/storage/{self.parent_id}/', 
-                'definitionitem':f'/api/specify/storagetreedefitem/{self.rank}/'
+                'definitionitem': f'/api/specify/storagetreedefitem/{self.definitionitem}/'
             }
         
         return node 

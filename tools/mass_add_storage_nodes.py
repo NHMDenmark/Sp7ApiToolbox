@@ -123,11 +123,13 @@ class MassAddStorageNodeTool(Sp7ApiTool):
         # Get current rank item 
         rankid = StorageRank[headers[index]].value
         rank = self.sp.getSpecifyObjects('storagetreedefitem', 15, 0, {"rankid": rankid})[0]
+        treedefitemid = str(rank['treeentries']).split('=')[1]
         
         # If no corresponding child nodes found, proceed to add child node
         if len(child_nodes) == 0:
-            storage_node = StorageNode(child_name, child_name, parent_id, rank['rankid'])
-            child_node = self.sp.postSpecifyObject('storage', storage_node.createJsonString())
+            storage_node = StorageNode(child_name, child_name, parent_id, rank['rankid'], treedefitemid)
+            jsonString = storage_node.createJsonString()
+            child_node = self.sp.postSpecifyObject('storage', jsonString)
         else: 
             child_node = child_nodes[0]
 

@@ -205,7 +205,7 @@ class SpecifyInterface():
     if response.status_code < 299:
       object = response.json()
     else: 
-      object = None
+      raise Exception(f"Response error: {response.status_code}")
 
     return object 
 
