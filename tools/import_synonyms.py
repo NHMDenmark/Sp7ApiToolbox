@@ -12,30 +12,31 @@
   PURPOSE: Tool for merging storage nodes upwards towards their nearest parent 
 """
 
+import os
+import csv
+
+# Internal Dependencies 
+from tools.sp7api_tool import Sp7ApiTool
+import specify_interface
 from tools.sp7api_tool import Sp7ApiTool
 
 class ImportSynonymTool(Sp7ApiTool):
     """
-    
-    """
-    pass
+    Tool 
+    """        
 
-    
+    def __init__(self, specifyInterface: specify_interface.SpecifyInterface) -> None:
+        """
+        
+        """
+        
+        super().__init__(specifyInterface)
 
     def runTool(self, args):
         """
-        
-        """
-
-        super().initialize()
-
-        pass
-
-    
-
-    def __init__(self, args) -> None:
-        """
-        
+        Execute the tool for operation. 
+        CONTRACT 
+            args (dict) : Must specify the filename of the data file 
         """
         pass
 

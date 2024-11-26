@@ -13,43 +13,30 @@
 
 """
 from enum import Enum
-#from enums import StorageRank
+from models import treenode
 
-class StorageNode():
+class StorageNode(treenode.TreeNode):
     """
     Class encapsulating storage tree node relevant methods 
     """
 
-    def __init__(self, name, fullname, parent_id, rank_id, treedefitemid) -> None:
+    def __init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid) -> None:
         """
         Constructor
         CONTRACT 
-            record (dict)
+            name (String)           : name of the storage tree node 
+            fullname (String)       : full name of the storage tree node
+            parent_id (Integer)     : parent storage node's primary key in specify 
+            rank_id (String)        : storage node rank's identifier 
+            treedefitemid (Integer) : storage node rank's primary key in specify 
         """
         
         self.sptype = 'storage'
-        
-        self.name = name
-        self.fullname = fullname
-        self.rank = StorageRank(rank_id).value
-        self.parent_id = parent_id
-        self.definitionitem = treedefitemid
-        self.discipline = None
-        self.collection = None
 
-    def createJsonString(self) -> str:
-        """
-        Creates json representation of the storage node for posting or putting to the API. 
-        """
-       
-        node = {'fullname': self.fullname,
-                'name': self.name,
-                'rankid': self.rank,
-                'parent': f'/api/specify/storage/{self.parent_id}/', 
-                'definitionitem': f'/api/specify/storagetreedefitem/{self.definitionitem}/'
-            }
-        
-        return node 
+        treenode.TreeNode.__init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid)
+
+        self.rank = StorageRank(rank_id).value
+
 
 class StorageRank(Enum):
     """

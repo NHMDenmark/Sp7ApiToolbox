@@ -29,7 +29,7 @@ import csv
 from tools.sp7api_tool import Sp7ApiTool
 import specify_interface
 from models.storage_node import StorageNode
-from enums import StorageRank
+from models.storage_node import StorageRank
 
 class MassAddStorageNodeTool(Sp7ApiTool):
     """
@@ -127,7 +127,8 @@ class MassAddStorageNodeTool(Sp7ApiTool):
         
         # If no corresponding child nodes found, proceed to add child node
         if len(child_nodes) == 0:
-            storage_node = StorageNode(child_name, child_name, parent_id, rank['rankid'], treedefitemid)
+            storage_dict = {"name" : child_name,"fullname" : child_name,"parentid" : parent_id,"rankid" : rank['rankid'],"defitemid" : treedefitemid}
+            storage_node = StorageNode(0, child_name, child_name, parent_id, rank['rankid'], treedefitemid, 0)
             jsonString = storage_node.createJsonString()
             child_node = self.sp.postSpecifyObject('storage', jsonString)
         else: 
