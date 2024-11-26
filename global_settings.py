@@ -12,35 +12,37 @@
   PURPOSE: Assemblage of global settings used across the application. 
 """
 
-# Specify 
-baseURL = ''
+settings = {
+    'baseURL': '',
+    'database': {
+        'name': 'db',
+        'in_memory': False
+    },
+    'session': {
+        'institutionId': 0,
+        'institutionName': '',
+        'collection': None,
+        'collectionId': 0,
+        'collectionName': '',
+        'firstName': '',
+        'middleInitial': '',
+        'lastName': '',
+        'userName': '',
+        'password': '',
+        'spUserId': -1,
+        'csrfToken': '',
+        'lengthCatalogNumber': 0
+    }
+}
 
-# database 
-databaseName = 'db'
-db_in_memory = False
-
-# session 
-institutionId = 0
-institutionName = ''
-collection = None
-collectionId = 0
-collectionName = ''
-firstName = ''
-middleInitial = ''
-lastName = ''
-userName = ''
-password = ''
-spUserId = -1
-# agentFullName = ' '.join([spFirstName, spMiddleInitial, spLastName])
-csrfToken = ''
-lengthCatalogNumber = 0
-
-def clearSession():
-  institutionId = 0
-  institutionName = '-not set-'
-  collectionId = 0
-  collectionName = '-not set-'
-  userName = '-not set-'
-  password = ''
-  spUserId = -1
-  csrfToken = ''
+def clear_session():
+    settings['session'].update({
+        'institutionId': 0,
+        'institutionName': '-not set-',
+        'collectionId': 0,
+        'collectionName': '-not set-',
+        'userName': '-not set-',
+        'password': '',
+        'spUserId': -1,
+        'csrfToken': ''
+    })

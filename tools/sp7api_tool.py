@@ -12,10 +12,11 @@
   PURPOSE: Methods for manipulating the storage tree through the Specify7 API 
 """
 
-import json
+import os
+import csv
 
 # Internal Dependencies
-import global_settings as gs
+import global_settings as app
 import specify_interface
 import util
 
@@ -35,20 +36,61 @@ class Sp7ApiTool:
         """
 
         self.sp = specifyInterface
-        token = self.sp.specifyLogin(gs.userName, gs.password, gs.collectionId)
+        user_name = app.settings['userName']
+        pass_word = app.settings['password']
+        coll_id   = app.settings['collectionId']
+        
+        # Log in to Specify API and get CSFR token 
+        token = self.sp.specifyLogin(user_name, pass_word, coll_id)
         if token == '': 
-            msg = f"Could not log in with these credentials ({gs.userName}) and collection ({gs.collectionName} : {gs.collectionId})! "
+            msg = f"Could not log in with these credentials ({user_name}) to collection ({app.settings['collectionName']} : {coll_id})! "
             util.logger.error(msg)
             raise Exception(msg)
 
-    def runTool(self, args: dict) -> None:
+    def runTool(self, args):
         """
-        Run the tool with the given arguments.
+        Execute the tool for operation. 
         CONTRACT 
-            args (dict) : dictionary of arguments. 
+            args (dict) : Must specify the filename of the data file 
         """
-        print(args)
 
+        filename = args.get('filename')
+        if not filename:
+            raise Exception("No filename provided in args.")
+
+        if not os.path.isfile(f'data/{filename}'):
+            raise Exception(f"File {filename} does not exist.")
+
+        with open(f'data/{filename}', mode='r', encoding='utf-8') as file:
+            csv_reader = csv.DictReader(file, delimiter=';')
+            headers = csv_reader.fieldnames
+            print(f"CSV Headers: {headers}")
+
+            if self.validateHeaders(headers):
+                for row in csv_reader:
+                    if self.validateRow(row):
+                        self.processRow(headers, row)
+
+
+    def processRow(self, headers, row) -> None:
+        """
+        Generic empty method for handling individual data file rows
+        """
+        pass
+
+    def validateRow(self, row) -> bool:
+        """
+        Unfinished method for evaluating whether row format is valid. 
+        """
+        print(row)
+        return True
+
+    def validateHeaders(self, headers) -> bool:
+        """
+        Method for ensuring that the file format can be used by the tool.
+        """
+        print(headers)
+        return True
 
     def __str__(self) -> str:
         """

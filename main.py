@@ -20,7 +20,7 @@ import importlib
 
 #Internal Dependencies
 import specify_interface
-import global_settings as gs
+import global_settings as app
 from tools.mass_add_storage_nodes import MassAddStorageNodeTool
 
 class Main():
@@ -48,8 +48,8 @@ class Main():
         """
         util.cls()
         print("**** Specify7 API Toolbox ****")
-        print("Current domain: ", gs.baseURL)
-        print("Selected collection:", gs.collectionName)
+        print("Current domain: ", app.settings['baseURL'])
+        print("Selected collection:", app.settings['collectionName'])
 
         self.selectTool()
         self.selectDatafile()
@@ -57,6 +57,8 @@ class Main():
         print("Running tool...")
         args = {'filename': self.filename}
         self.tool_instance.runTool(args)  # Assuming each tool has a run method
+
+        print("*** Finished running tool ***")
 
 
     def selectDatafile(self):
@@ -111,10 +113,10 @@ class Main():
 
         if config:
             self.mode = config['mode']
-            gs.baseURL = config['domain']
-            gs.collectionName = config['collection']
-            gs.userName = config['username']
-            gs.password =  config['password']
+            app.settings['baseURL'] = config['domain']
+            app.settings['collectionName'] = config['collection']
+            app.settings['userName'] = config['username']
+            app.settings['password'] =  config['password']
         else:
             raise Exception("Configuration error!") 
                 
@@ -124,8 +126,8 @@ class Main():
 
         print(collections)
 
-        gs.collectionId = collections.get(gs.collectionName, None)
-        print(gs.collectionId)
+        app.settings['collectionId'] = collections.get(app.settings['collectionName'], None)
+        print(app.settings['collectionId'])
 
     def loadTools(self):
         """

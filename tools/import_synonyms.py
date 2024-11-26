@@ -12,9 +12,6 @@
   PURPOSE: Tool for merging storage nodes upwards towards their nearest parent 
 """
 
-import os
-import csv
-
 # Internal Dependencies 
 from tools.sp7api_tool import Sp7ApiTool
 import specify_interface
@@ -31,17 +28,62 @@ class ImportSynonymTool(Sp7ApiTool):
         """
         
         super().__init__(specifyInterface)
+        
+    def processRow(self, headers, row) -> None:
+        """
+        Handle row by ...
+        """
 
-    def runTool(self, args):
-        """
-        Execute the tool for operation. 
-        CONTRACT 
-            args (dict) : Must specify the filename of the data file 
-        """
         pass
+
+    def addTaxonNode(self, headers, row):
+        """
+        
+        """
+
+        
+
+
+    def validateRow(self, row) -> bool:
+        """
+        Unfinished method for evaluating whether row format is valid. 
+        """
+        print(row)
+        return True
+
+    def validateHeaders(self, headers) -> bool:
+        """
+        Method for ensuring that the file format can be used by the tool.
+        """
+        # Check headers to see if these fit the expected file format
+        if len(headers) < 2:
+            raise Exception("Wrong header count. Expected: at least 2")
+            #return False
+        else:
+            if headers[0] != "Class": 
+                raise Exception("Wrong first header (parent node). Expected: Class")
+                #return False
+            else:
+                return True
+        
+        #return False
 
     def __str__(self) -> None:
         """
         """
-        return "MassAddStorageNodeTool"
+        return "ImportSynonymTool"
 
+
+"""
+
+Species Author
+Subspecies
+Subspecies Author
+isAccepted
+AcceptedGenus
+AcceptedSpecies
+AcceptedSpeciesAuthor
+AcceptedSubspecies
+AcceptedSubspeciesAuthor
+
+"""

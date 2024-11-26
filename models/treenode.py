@@ -55,7 +55,5 @@ class TreeNode:
         
         return obj 
 
-    # Generic functions
-
     def __str__(self):
         return f'[{self.sptype}] id:{self.id}, name:{self.name}, fullname = {self.fullname} '
