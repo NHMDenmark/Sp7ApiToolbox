@@ -13,11 +13,10 @@
 """
 
 # Internal Dependencies 
-from tools.sp7api_tool import Sp7ApiTool
+from tools.treenode_tool import TreeNodeTool
 import specify_interface
-from tools.sp7api_tool import Sp7ApiTool
 
-class ImportSynonymTool(Sp7ApiTool):
+class ImportSynonymTool(TreeNodeTool):
     """
     Tool 
     """        
@@ -26,6 +25,8 @@ class ImportSynonymTool(Sp7ApiTool):
         """
         
         """
+
+        self.sptype = 'taxon'
         
         super().__init__(specifyInterface)
         
@@ -41,14 +42,14 @@ class ImportSynonymTool(Sp7ApiTool):
         
         """
 
-        
+        pass
 
 
     def validateRow(self, row) -> bool:
         """
         Unfinished method for evaluating whether row format is valid. 
         """
-        print(row)
+        
         return True
 
     def validateHeaders(self, headers) -> bool:

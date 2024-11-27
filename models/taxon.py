@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 """
-  Created on November 22, 2024
+  Created on November 25, 2024
   @author: Fedor Alexander Steeman, NHMD
   Copyright 2024 Natural History Museum of Denmark (NHMD)
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +12,11 @@
   PURPOSE:
 
 """
+
 from enum import Enum
 from models import treenode
 
-class StorageNode(treenode.TreeNode):
+class Taxon(treenode.TreeNode):
     """
     Class encapsulating storage tree node relevant methods 
     """
@@ -27,31 +28,41 @@ class StorageNode(treenode.TreeNode):
             name (String)           : name of the storage tree node 
             fullname (String)       : full name of the storage tree node
             parent_id (Integer)     : parent storage node's primary key in specify 
-            rank_id (String)        : storage node rank's identifier 
-            treedefitemid (Integer) : storage node rank's primary key in specify 
+            rank_id (String)        : taxon rank's identifier 
+            treedefitemid (Integer) : taxon rank's primary key in specify 
+            treedefid (Integer)     : taxon tree's primary key in specify 
         """
         
-        self.sptype = 'storage'
-
-        self.rank = rank_id #StorageRank(rank_id).value
-
+        self.sptype = 'taxon'
+        
         treenode.TreeNode.__init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid)
 
+        self.rank = TaxonRank(rank_id).value
 
-# class StorageRank(Enum):
-#     """
-#     Storage names paired with rank ids as derived from a standard Specify setup
-#     """
-#     Institution = 0 
-#     #Root = 0
-#     Collection = 150 
-#     Room = 200 
-#     Aisle = 250 
-#     Cabinet = 300 
-#     Shelf = 350 
-#     Box = 400 
-#     Rack = 450 
-#     Vial = 500 
-#     Site = 75 
-#     CryoBox = 475 
-#     Empty = -1
+
+class TaxonRank(Enum):
+    """
+    Taxon names paired with rank ids as derived from a standard Specify setup
+    """
+    Life = 0 
+    Kingdom = 10 
+    Phylum = 30 
+    Subphylum = 40 
+    Superclass = 50 
+    Class = 60 
+    Subclass = 70 
+    Infraclass = 80 
+    Superorder = 90 
+    Order = 100 
+    Suborder = 110 
+    Infraorder = 120 
+    Superfamily = 130 
+    Family = 140 
+    Subfamily = 150 
+    Tribe = 160 
+    Subtribe = 170 
+    Genus = 180 
+    Subgenus = 190 
+    Species = 220 
+    Subspecies = 230 
+    Empty = -1

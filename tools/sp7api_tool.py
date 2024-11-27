@@ -22,8 +22,7 @@ import util
 
 class Sp7ApiTool:
     """
-    The Storage Tree Tool groups methods specifically meant to perform actions on the Specify storage tree through the API.
-    ...
+    Generic class for tools that interact with the Specify7 API 
     """
 
     def __init__(self, specifyInterface: specify_interface.SpecifyInterface) -> None:
@@ -51,7 +50,9 @@ class Sp7ApiTool:
         """
         Execute the tool for operation. 
         CONTRACT 
-            args (dict) : Must specify the filename of the data file 
+            args (dict) : Must include the following items  
+                            1. 'filename': name of the data file 
+                            2. 'sptype': name of the type of tree i.e. 'storage', 'taxon' or 'geography'
         """
 
         filename = args.get('filename')
@@ -64,7 +65,7 @@ class Sp7ApiTool:
         with open(f'data/{filename}', mode='r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file, delimiter=';')
             headers = csv_reader.fieldnames
-            print(f"CSV Headers: {headers}")
+            #print(f"CSV Headers: {headers}")
 
             if self.validateHeaders(headers):
                 for row in csv_reader:
@@ -82,14 +83,14 @@ class Sp7ApiTool:
         """
         Unfinished method for evaluating whether row format is valid. 
         """
-        print(row)
+        
         return True
 
     def validateHeaders(self, headers) -> bool:
         """
         Method for ensuring that the file format can be used by the tool.
         """
-        print(headers)
+        
         return True
 
     def __str__(self) -> str:

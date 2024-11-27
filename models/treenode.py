@@ -19,7 +19,7 @@ class TreeNode:
     The model class is a base class for data models inheriting & re-using a suite of shared functions
     """
 
-    def __init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid) -> None:
+    def __init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid, specify_type) -> None:
         """
         Constructor
         CONTRACT 
@@ -37,8 +37,8 @@ class TreeNode:
         self.parent_id = parent_id
         self.definitionitem_id = treedefitemid
         self.treedef_id = treedefid
-        self.discipline = None
-        self.rank = 0
+        self.sptype = specify_type
+        self.rank = rank_id
 
     def createJsonString(self) -> str:
         """

@@ -55,7 +55,7 @@ class Main():
         self.selectDatafile()
 
         print("Running tool...")
-        args = {'filename': self.filename}
+        args = {'filename' : self.filename}
         self.tool_instance.runTool(args)  # Assuming each tool has a run method
 
         print("*** Finished running tool ***")
@@ -90,7 +90,12 @@ class Main():
         for index, (name, _) in enumerate(self.toolKit, start=1):
             print(f"{index}. {name}")
 
-        choice = int(input("\nEnter the number of the tool you want to run: ")) - 1
+        entry = input("\nEnter the number of the tool you want to run: ")
+        if not entry.isnumeric():
+            print("Invalid choice. Please try again.")
+            self.selectTool()
+
+        choice = int(entry) - 1
 
         if 0 <= choice < len(self.toolKit):
             tool_name, self.tool_instance = self.toolKit[choice]

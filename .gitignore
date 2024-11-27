@@ -168,3 +168,5 @@ config.debug.json
 config.test.json
 config.live.json
 sandbox.py
+data/cabinet_shelf_numbers_test.csv
+data/cabinet_shelf_numbers.csv
