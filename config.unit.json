@@ -1,5 +1,5 @@
 {
-    "mode":       "default",
+    "mode":       "unit",
     "domain":     "https://sp7demofish.specifycloud.org/", 
     "collection": "KUFishvoucher", 
     "username":   "sp7demofish", 

@@ -190,7 +190,7 @@ class SpecifyInterface():
 
   def getSpecifyObject(self, objectName, objectId):
     """ 
-    Generic method for fetching objects from the Specify API using their primary key
+    Generic method for fetching an object from the Specify API using their primary key
     CONTRACT 
       objectName (String)  : The API's name for the object to be fetched  
       objectId   (Integer) : The primary key of the object
@@ -239,7 +239,7 @@ class SpecifyInterface():
     CONTRACT 
       objectName    (String)  : The API's name for the object to be fetched  
       specifyObject (JSON)    : The state of the object to be created 
-      RETURNS response  
+      RETURNS boolean to indicate success  
     """ 
     headers = {'content-type': 'application/json', 'X-CSRFToken': self.csrfToken, 'referer': self.baseURL}
     apiCallString = f"{self.baseURL}api/specify/{objectName}/"
@@ -248,6 +248,27 @@ class SpecifyInterface():
     util.logger.debug(' - Response: %s %s' %(str(response.status_code), response.reason))
     if response.status_code < 299:
        return response.json()
+    else: 
+      raise Exception(f"Response error: {response.status_code}")
+    #return response.status_code 
+
+  def deleteSpecifyObject(self, objectName, objectId):
+    """ 
+    Generic method for deleting an object from the Specify API using their primary key
+    CONTRACT 
+      objectName (String)  : The API's name for the object to be fetched  
+      objectId   (Integer) : The primary key of the object
+      RETURNS fetched object 
+    """ 
+    util.logger.debug('Fetching ' + objectName + ' object on id: ' + str(objectId))
+    headers = {'content-type': 'application/json', 'X-CSRFToken': self.csrfToken, 'Referer': self.baseURL}
+    apiCallString = f'{self.baseURL}api/specify/{objectName}/{objectId}/' 
+    util.logger.debug(apiCallString)
+    response = self.spSession.delete(apiCallString, headers=headers, verify=False)
+    util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
+    util.logger.debug(f' - Session cookies: {self.spSession.cookies.get_dict()}')
+    if response.status_code < 299:
+      return True
     else: 
       raise Exception(f"Response error: {response.status_code}")
     #return response.status_code 

@@ -66,7 +66,7 @@ class MassAddStorageNodeTool(TreeNodeTool):
         Unfinished method for evaluating whether row format is valid. 
         """
 
-        valid = super().validateHeaders(row)
+        valid = super().validateRow(row)
         
         return valid
 
