@@ -76,15 +76,11 @@ class TreeNodeTool(Sp7ApiTool):
 
         # Check if child node does not already exist 
         child_name = row[headers[index]]
-        child_nodes = self.sp.getSpecifyObjects(self.sptype, 1000, 0, {'fullname': child_name, 'parent': parent_id})
-
-        # Get current rank item 
-        rank = self.getTreeDefItem(headers[index]) 
-        treedefitemid = str(rank['treeentries']).split('=')[1]
+        child_nodes = self.sp.getSpecifyObjects(self.sptype, 1000, 0, {'fullname': child_name, 'parent': parent_id})         
         
         # If no corresponding child nodes found, proceed to add child node
         if len(child_nodes) == 0:
-            tree_node = TreeNode(0, child_name, child_name, parent_id, rank['rankid'], treedefitemid, 0, self.sptype)
+            tree_node = self.createTreeNode(headers, row, parent_id, index) 
             jsonString = tree_node.createJsonString()
             child_node = self.sp.postSpecifyObject(self.sptype, jsonString)
         else: 
@@ -94,6 +90,18 @@ class TreeNodeTool(Sp7ApiTool):
         if index < len(headers) - 1:
             # Recursively add any subordinate child node
             self.addChildNodes(headers, row, child_node['id'], index + 1)
+
+    def createTreeNode(self, headers, row, parent_id, index):
+        """
+        Generic method for creating tree node 
+        """
+
+        rank = self.getTreeDefItem(headers[index])
+        treedefitemid = str(rank['treeentries']).split('=')[1]
+        name = row[headers[index]]
+        node = TreeNode(0, name, name, parent_id, rank['rankid'], treedefitemid, 0, self.sptype)
+
+        return node
 
     def getParentId(self, parent_name, parent_rank):
         """
@@ -129,8 +137,10 @@ class TreeNodeTool(Sp7ApiTool):
         """
         Unfinished method for evaluating whether row format is valid. 
         """
-        
-        return True
+
+        valid = super().validateRow(row)
+
+        return valid
 
     def validateHeaders(self, headers) -> bool:
         """
@@ -143,6 +153,7 @@ class TreeNodeTool(Sp7ApiTool):
         rank_names = {item['name']: item for item in self.TreeDefItems}
         
         for header in headers:
+            print(header)
             if header not in rank_names:
                 return False
 
@@ -153,7 +164,7 @@ class TreeNodeTool(Sp7ApiTool):
         
         """
         
-        self.TreeDefItems = self.sp.getSpecifyObjects(f"{self.sptype}treedefitem")
+        self.TreeDefItems = self.sp.getSpecifyObjects(f"{self.sptype}treedefitem", sort='rankid')
 
     def getTreeDefItem(self, header):
         """

@@ -13,15 +13,15 @@
 
 """
 
-from enum import Enum
-from models import treenode
+# Internal Dependencies 
+from models.treenode import TreeNode
 
-class Taxon(treenode.TreeNode):
+class Taxon(TreeNode):
     """
     Class encapsulating storage tree node relevant methods 
     """
 
-    def __init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid) -> None:
+    def __init__(self, id, name, fullname, taxon_author, parent_id, rank_id, treedefitemid, treedefid) -> None:
         """
         Constructor
         CONTRACT 
@@ -33,36 +33,33 @@ class Taxon(treenode.TreeNode):
             treedefid (Integer)     : taxon tree's primary key in specify 
         """
         
-        self.sptype = 'taxon'
+        TreeNode.__init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid)
         
-        treenode.TreeNode.__init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid)
+        self.sptype = 'taxon'        
+        self.author = taxon_author
 
-        self.rank = TaxonRank(rank_id).value
+"""
 
+Life= 0 
+Kingdom= 10 
+Phylum= 30 
+Subphylum= 40 
+Superclass= 50 
+Class= 60 
+Subclass= 70 
+Infraclass= 80 
+Superorder= 90 
+Order= 100 
+Suborder= 110 
+Infraorder= 120 
+Superfamily= 130 
+Family= 140 
+Subfamily= 150 
+Tribe= 160 
+Subtribe= 170 
+Genus= 180 
+Subgenus= 190 
+Species= 220 
+Subspecies= 230 
 
-class TaxonRank(Enum):
-    """
-    Taxon names paired with rank ids as derived from a standard Specify setup
-    """
-    Life = 0 
-    Kingdom = 10 
-    Phylum = 30 
-    Subphylum = 40 
-    Superclass = 50 
-    Class = 60 
-    Subclass = 70 
-    Infraclass = 80 
-    Superorder = 90 
-    Order = 100 
-    Suborder = 110 
-    Infraorder = 120 
-    Superfamily = 130 
-    Family = 140 
-    Subfamily = 150 
-    Tribe = 160 
-    Subtribe = 170 
-    Genus = 180 
-    Subgenus = 190 
-    Species = 220 
-    Subspecies = 230 
-    Empty = -1
+"""       

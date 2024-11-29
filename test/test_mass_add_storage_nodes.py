@@ -20,7 +20,7 @@ def test_initialization():
 def test_validateHeaders():
     """ Test whether headers are properly validated """
     with open('data/mass_add_storage_nodes.csv', mode='r', encoding='utf-8') as file:
-        csv_reader = csv.DictReader(file, delimiter=';')
+        csv_reader = csv.DictReader(file, delimiter=',')
         headers = csv_reader.fieldnames
 
     assert tool.validateHeaders(headers)

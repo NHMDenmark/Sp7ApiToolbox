@@ -161,7 +161,7 @@ class SpecifyInterface():
     util.logger.debug('------------------------------')
     return object 
 
-  def getSpecifyObjects(self, objectName, limit=100, offset=0, filters={}):
+  def getSpecifyObjects(self, objectName, limit=100, offset=0, filters={}, sort=''):
     """ 
     Generic method for fetching object sets from the Specify API based on object name 
     CONTRACT 
@@ -177,7 +177,7 @@ class SpecifyInterface():
     filterString = ""
     for key in filters:
       filterString += f"&{key}={filters[key]}"
-    apiCallString = f'{self.baseURL}api/specify/{objectName}/?limit={limit}&offset={offset}{filterString}'
+    apiCallString = f'{self.baseURL}api/specify/{objectName}/?limit={limit}&offset={offset}{filterString}&orderby={sort}'
     response = self.spSession.get(apiCallString, headers=headers, verify=False)
     util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
     if response.status_code < 299:

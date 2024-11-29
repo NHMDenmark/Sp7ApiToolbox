@@ -14,6 +14,7 @@
 
 # Internal Dependencies 
 from tools.treenode_tool import TreeNodeTool
+from models.taxon import Taxon
 import specify_interface
 
 class ImportSynonymTool(TreeNodeTool):
@@ -35,9 +36,18 @@ class ImportSynonymTool(TreeNodeTool):
         Handle row by ...
         """
 
+        index = headers.index('isAccepted')
+
+        # First add accepted taxa nodes if they don't already exist
+        
+
+        # Get primary keys of accepted taxa node 
+
+        # Add synonym node to tree 
+
         pass
 
-    def addTaxonNode(self, headers, row):
+    def addSynonymNode(self, headers, row):
         """
         
         """
@@ -49,25 +59,60 @@ class ImportSynonymTool(TreeNodeTool):
         """
         Unfinished method for evaluating whether row format is valid. 
         """
-        
-        return True
+
+        valid = super().validateRow(row)
+
+        return valid
 
     def validateHeaders(self, headers) -> bool:
         """
         Method for ensuring that the file format can be used by the tool.
         """
-        # Check headers to see if these fit the expected file format
-        if len(headers) < 2:
-            raise Exception("Wrong header count. Expected: at least 2")
-            #return False
-        else:
-            if headers[0] != "Class": 
-                raise Exception("Wrong first header (parent node). Expected: Class")
-                #return False
-            else:
-                return True
+
+        index = headers.index('isAccepted')
+        if index <= 0:
+            return False
+                
+        if headers[index-1] == 'Author': 
+            pass
+
+        tax_headers = headers[:index]
+        syn_headers = headers[index:]
+
+        # Remove author fields for validation
+        tax_headers = [header for header in tax_headers if "Author" not in header]
+
+        valid = super().validateHeaders(tax_headers)
+
+        return valid
+
+    def createTreeNode(self, headers, row, parent_id, index):
+        """
+        Specific method for creating taxon tree node 
+        """
+
+        rank = self.getTreeDefItem(headers[index])
+        treedefitemid = str(rank['treeentries']).split('=')[1]
+        name = row[headers[index]]
+        rank_id = rank['rankid']
         
-        #return False
+        # TODO generate full name when infrageneric 
+        fullname = ''
+        if rank_id > 180:
+            for r in reversed(self.TreeDefItems):
+                if r['name'] in row:
+                    fullname = row[r['name']] + ' ' + fullname
+                if r['name'] == "Genus": 
+                    break
+        fullname = fullname.strip()
+
+        author = ''
+        if headers[index]+'Author' in row:
+            author = row[headers[index]+'Author']
+        node = Taxon(0, name, fullname, author, parent_id, rank['rankid'], treedefitemid, 0)
+
+        return node
+    
 
     def __str__(self) -> None:
         """
