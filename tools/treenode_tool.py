@@ -43,7 +43,6 @@ class TreeNodeTool(Sp7ApiTool):
 
         super().runTool(args)
 
-
     def processRow(self, headers, row) -> None:
         """
         Generic empty method for handling individual data file rows
@@ -66,30 +65,56 @@ class TreeNodeTool(Sp7ApiTool):
         # Start recursive addition of child nodes
         self.addChildNodes(headers, row, parent_id, 1)
 
-    def addChildNodes(self, headers, row, parent_id, index):
+    def addChildNodes(self, headers, row, parent_id, index) -> object:
         """
-        Recursively add child nodes.
+        Recursively add child nodes and return the last child node added.
         """
-        # Exit recursion when last column reached
-        if index >= len(headers):
-            return
-
-        # Check if child node does not already exist 
-        child_name = row[headers[index]]
-        child_nodes = self.sp.getSpecifyObjects(self.sptype, 1000, 0, {'fullname': child_name, 'parent': parent_id})         
         
-        # If no corresponding child nodes found, proceed to add child node
-        if len(child_nodes) == 0:
-            tree_node = self.createTreeNode(headers, row, parent_id, index) 
-            jsonString = tree_node.createJsonString()
-            child_node = self.sp.postSpecifyObject(self.sptype, jsonString)
-        else: 
-            child_node = child_nodes[0]
+        # Exit recursion when last column reached
+        if index >= len(headers): return None
 
-        # If there is a next column that represents a subordinate child node, add that recursively
+        # Check if child node already exists
+        child_name = row[headers[index]]
+        child_node = self.getTreeNode(child_name, parent_id)
+
+        # If no corresponding child node is found, proceed to add new child node
+        if not child_node:
+            # Create a new node if none was found 
+            child_node = self.createTreeNode(headers, row, parent_id, index)
+        
+        # Recursive call for the next child node
         if index < len(headers) - 1:
-            # Recursively add any subordinate child node
-            self.addChildNodes(headers, row, child_node['id'], index + 1)
+            if child_node:
+                last_child_node = self.addChildNodes(headers, row, child_node.id, index + 1)
+            else:
+                pass
+
+            if last_child_node:
+                return last_child_node
+
+        # Return the current child node if it's the last one added
+        return child_node
+
+    def getTreeNode(self, child_name, parent_id):
+        """ 
+        Attempt to fetch tree node instance from Specify7 based on name and parent id. 
+        """
+
+        child_dict = self.sp.getSpecifyObjects(self.sptype, 1000, 0, {
+            'name': child_name,
+            'parent': parent_id
+        })
+
+        child_nodes = []
+        for child in child_dict:
+            node = TreeNode.init(child)
+            child_nodes.append(node)
+        
+        # Use the first matching existing node
+        if len(child_nodes) > 0:
+            return child_nodes[0]
+
+        return None
 
     def createTreeNode(self, headers, row, parent_id, index):
         """
@@ -99,7 +124,17 @@ class TreeNodeTool(Sp7ApiTool):
         rank = self.getTreeDefItem(headers[index])
         treedefitemid = str(rank['treeentries']).split('=')[1]
         name = row[headers[index]]
-        node = TreeNode(0, name, name, parent_id, rank['rankid'], treedefitemid, 0, self.sptype)
+        rank_id = rank['rankid']
+
+        # Create the tree node object
+        node = TreeNode(0, name, name, parent_id, rank_id, treedefitemid, 0, self.sptype)
+
+        # Post the taxon node to the API
+        jsonString = node.createJsonString()
+        sp7_obj = self.sp.postSpecifyObject(self.sptype, jsonString)
+
+        # Assign the ID from the API response
+        node.id = sp7_obj['id']
 
         return node
 
@@ -131,7 +166,6 @@ class TreeNodeTool(Sp7ApiTool):
         
         # Return retrieved parent node
         return parent_nodes[0]['id']
-
 
     def validateRow(self, row) -> bool:
         """

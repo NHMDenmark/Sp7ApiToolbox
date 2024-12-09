@@ -38,6 +38,22 @@ class Taxon(TreeNode):
         self.sptype = 'taxon'        
         self.author = taxon_author
 
+    def createJsonString(self) -> str:
+        """
+        Creates json representation of the object for posting or putting to the API. 
+        """
+       
+        obj = {'fullname': self.fullname,
+                'name': self.name,
+                'rankid': self.rank,
+                'parent': f'/api/specify/{self.sptype}/{self.parent_id}/', 
+                'treedefid': f'/api/specify/{self.sptype}/{self.treedef_id}/', 
+                'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
+                'author': self.author
+            }
+        
+        return obj 
+
 """
 
 Life= 0 

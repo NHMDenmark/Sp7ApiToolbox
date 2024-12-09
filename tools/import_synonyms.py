@@ -54,7 +54,6 @@ class ImportSynonymTool(TreeNodeTool):
 
         pass
 
-
     def validateRow(self, row) -> bool:
         """
         Unfinished method for evaluating whether row format is valid. 
@@ -88,7 +87,7 @@ class ImportSynonymTool(TreeNodeTool):
 
     def createTreeNode(self, headers, row, parent_id, index):
         """
-        Specific method for creating taxon tree node 
+        Specific method for creating taxon tree node. 
         """
 
         rank = self.getTreeDefItem(headers[index])
@@ -96,23 +95,37 @@ class ImportSynonymTool(TreeNodeTool):
         name = row[headers[index]]
         rank_id = rank['rankid']
         
-        # TODO generate full name when infrageneric 
-        fullname = ''
+        # Generate full name when infrageneric 
+        fullname = name
         if rank_id > 180:
+            fullname = ''
             for r in reversed(self.TreeDefItems):
                 if r['name'] in row:
                     fullname = row[r['name']] + ' ' + fullname
                 if r['name'] == "Genus": 
                     break
-        fullname = fullname.strip()
+            fullname = fullname.strip()
 
+        # Add author if available
         author = ''
         if headers[index]+'Author' in row:
             author = row[headers[index]+'Author']
-        node = Taxon(0, name, fullname, author, parent_id, rank['rankid'], treedefitemid, 0)
 
-        return node
-    
+
+        # TODO Handle synonymy !!!
+
+        # Create the taxon node object
+        taxon_node = Taxon(0, name, fullname, author, parent_id, rank['rankid'], treedefitemid, 0 )
+
+        # Post the taxon node to the API
+        jsonString = taxon_node.createJsonString()
+        sp7_obj = self.sp.postSpecifyObject(self.sptype, jsonString)
+
+        # Assign the ID from the API response
+        taxon_node.id = sp7_obj['id']
+
+        return taxon_node
+  
 
     def __str__(self) -> None:
         """

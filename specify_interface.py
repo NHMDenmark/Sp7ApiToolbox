@@ -270,8 +270,10 @@ class SpecifyInterface():
     if response.status_code < 299:
       return True
     else: 
-      raise Exception(f"Response error: {response.status_code}")
-    #return response.status_code 
+      #raise Exception(f"Response error: {response.status_code}")
+      util.logger.debug(f' - ERROR trying to delete object!')
+
+    return False #response.status_code 
 
   def directAPIcall(self, callString):#, csrftoken):
     """ 

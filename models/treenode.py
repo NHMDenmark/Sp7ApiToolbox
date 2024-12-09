@@ -12,14 +12,15 @@
   PURPOSE: Generic base class "TreeNode" for Specify objects that are (also) nodes in hierarchical tree structures.
 """
 
-
+import time
+import datetime
 
 class TreeNode:
     """
     The model class is a base class for data models inheriting & re-using a suite of shared functions
     """
 
-    def __init__(self, id, name, fullname, parent_id, rank_id, treedefitemid, treedefid) -> None:
+    def __init__(self, id=None, name=None, fullname=None, parent_id=None, rank_id=None, treedefitemid=None, treedefid=None, sptype=None) -> None:
         """
         Constructor
         CONTRACT 
@@ -39,6 +40,22 @@ class TreeNode:
         self.treedef_id = treedefid
         self.rank = rank_id
 
+        self.is_accepted = None
+        self.accepted_taxon_id = None
+        self.is_hybdrid = None
+        self.create_datetime = datetime.datetime.now()
+
+        if sptype: self.sptype = sptype
+    
+    @classmethod
+    def init(cls, jsonObject):
+        """
+        Initialize treenode by filling it from json string contents as returned from API
+        """
+        instance = cls()
+        instance.fill(jsonObject)
+        return instance
+
     def createJsonString(self) -> str:
         """
         Creates json representation of the object for posting or putting to the API. 
@@ -49,10 +66,34 @@ class TreeNode:
                 'rankid': self.rank,
                 'parent': f'/api/specify/{self.sptype}/{self.parent_id}/', 
                 'treedefid': f'/api/specify/{self.sptype}/{self.treedef_id}/', 
-                'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/'
+                'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
+                'isaccepted': self.is_accepted,
+                'acceptedtaxon': f'/api/specify/{self.sptype}/{self.accepted_taxon_id}/',
+                'ishybrid': self.is_hybdrid                
             }
         
         return obj 
+
+    def fill(self, jsonObject):
+        """
+        Fill treenode from json string contents as returned from API
+        """
+
+        self.id = jsonObject['id']
+        self.name = jsonObject['name']
+        self.fullname = jsonObject['fullname']
+        self.parent_id = jsonObject['parent'].split('/')[4]
+        self.definitionitem_id = jsonObject['definition'].split('/')[4]
+        self.treedef_id = jsonObject['definitionitem'].split('/')[4] 
+        self.rank = jsonObject['rankid']
+
+        self.is_accepted = bool(jsonObject['isaccepted'])
+        if not self.is_accepted:
+            self.accepted_taxon_id = jsonObject['acceptedtaxon']
+        
+        self.is_hybdrid = bool(jsonObject['ishybrid'])
+        self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
+        self.sptype = jsonObject['resource_uri'].split('/')[3] 
 
     def __str__(self):
         return f'[{self.sptype}] id:{self.id}, name:{self.name}, fullname = {self.fullname} '
