@@ -12,7 +12,6 @@
   PURPOSE: Generic base class "TreeNode" for Specify objects that are (also) nodes in hierarchical tree structures.
 """
 
-import time
 import datetime
 
 class TreeNode:
@@ -39,10 +38,7 @@ class TreeNode:
         self.definitionitem_id = treedefitemid
         self.treedef_id = treedefid
         self.rank = rank_id
-
-        self.is_accepted = None
-        self.accepted_taxon_id = None
-        self.is_hybdrid = None
+        
         self.create_datetime = datetime.datetime.now()
 
         if sptype: self.sptype = sptype
@@ -66,10 +62,7 @@ class TreeNode:
                 'rankid': self.rank,
                 'parent': f'/api/specify/{self.sptype}/{self.parent_id}/', 
                 'treedefid': f'/api/specify/{self.sptype}/{self.treedef_id}/', 
-                'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
-                'isaccepted': self.is_accepted,
-                'acceptedtaxon': f'/api/specify/{self.sptype}/{self.accepted_taxon_id}/',
-                'ishybrid': self.is_hybdrid                
+                'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/'
             }
         
         return obj 
@@ -87,11 +80,6 @@ class TreeNode:
         self.treedef_id = jsonObject['definitionitem'].split('/')[4] 
         self.rank = jsonObject['rankid']
 
-        self.is_accepted = bool(jsonObject['isaccepted'])
-        if not self.is_accepted:
-            self.accepted_taxon_id = jsonObject['acceptedtaxon']
-        
-        self.is_hybdrid = bool(jsonObject['ishybrid'])
         self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
         self.sptype = jsonObject['resource_uri'].split('/')[3] 
 

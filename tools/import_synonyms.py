@@ -28,6 +28,7 @@ class ImportSynonymTool(TreeNodeTool):
         """
 
         self.sptype = 'taxon'
+        self.tree_definition = 0
         
         super().__init__(specifyInterface)
         
@@ -36,22 +37,24 @@ class ImportSynonymTool(TreeNodeTool):
         Handle row by ...
         """
 
+        # Keep synonymy headers separate 
         index = headers.index('isAccepted')
+        tax_headers = headers[:index]
+        syn_headers = headers[index:]
 
-        # First add accepted taxa nodes if they don't already exist
+        # Remove author fields for validation
+        tax_headers = [header for header in tax_headers if "Author" not in header]
+
+        # get root of tree (Life?)
+        root = self.sp.getSpecifyObjects('taxon', limit=1)[0]
         
+        # Add accepted taxa nodes if they don't already exist
+        self.addChildNodes(tax_headers, row, root['id'], 0)
 
-        # Get primary keys of accepted taxa node 
-
-        # Add synonym node to tree 
-
-        pass
-
-    def addSynonymNode(self, headers, row):
-        """
+        # TODO? Get primary keys of accepted taxa node 
+        pass 
         
-        """
-
+        #  TODO? Add synonym node to tree 
         pass
 
     def validateRow(self, row) -> bool:
@@ -67,23 +70,29 @@ class ImportSynonymTool(TreeNodeTool):
         """
         Method for ensuring that the file format can be used by the tool.
         """
+        try:
+            index = headers.index('isAccepted')
+        except ValueError:
+            # 'isAccepted' not found in headers
+            return False
 
         index = headers.index('isAccepted')
         if index <= 0:
             return False
                 
-        if headers[index-1] == 'Author': 
-            pass
+        #if headers[index-1] == 'Author': pass
 
-        tax_headers = headers[:index]
-        syn_headers = headers[index:]
+        taxon_headers = [header for header in headers[:index] if 'Author' not in header]
 
-        # Remove author fields for validation
-        tax_headers = [header for header in tax_headers if "Author" not in header]
-
-        valid = super().validateHeaders(tax_headers)
+        valid = super().validateHeaders(taxon_headers)
 
         return valid
+
+
+    def addChildNodes(self, headers, row, parent_id, index):
+        """
+        """
+        return super().addChildNodes(headers, row, parent_id, index)
 
     def createTreeNode(self, headers, row, parent_id, index):
         """
@@ -110,12 +119,64 @@ class ImportSynonymTool(TreeNodeTool):
         author = ''
         if headers[index]+'Author' in row:
             author = row[headers[index]+'Author']
-
-
-        # TODO Handle synonymy !!!
-
+        
         # Create the taxon node object
-        taxon_node = Taxon(0, name, fullname, author, parent_id, rank['rankid'], treedefitemid, 0 )
+        taxon_node = Taxon(self.tree_definition, name, fullname, author, parent_id, rank_id, treedefitemid, 0)
+
+        # TODO Handle synonymy 
+        is_accepted = (row['isAccepted'] == 'Yes')        
+        if not is_accepted and rank_id > 190:
+            # Create as synonym node object 
+
+            accepted_node = None
+            # Species synonym 
+            if rank_id == 220 and row['Subspecies'] == '':
+                # Accepted species
+                if row['AcceptedSubspecies'] == '':
+                    accepted_node = Taxon(self.tree_definition,
+                                          row['AcceptedSpecies'],
+                                          row['Genus'] + ' ' + row['AcceptedSpecies'],
+                                          row['AcceptedSpeciesAuthor'],
+                                          parent_id, rank_id, treedefitemid, 0)
+
+                # Accepted subspecies
+                elif row['AcceptedSubspecies'] != '':
+                    accepted_node = Taxon(self.tree_definition,
+                                          row['AcceptedSubspecies'],
+                                          row['Genus'] + ' ' + row['AcceptedSpecies'] + ' ' + row['AcceptedSubspecies'],
+                                          row['AcceptedSpeciesAuthor'],
+                                          parent_id, 230, treedefitemid, 0)
+
+            # Subspecies synonym 
+            if rank_id == 230 and row['Subspecies'] != '':
+                # Accepted species
+                if row['AcceptedSubspecies'] == '':
+                    accepted_node = Taxon(self.tree_definition,
+                                          row['AcceptedSpecies'],
+                                          row['Genus'] + ' ' + row['AcceptedSpecies'],
+                                          row['AcceptedSpeciesAuthor'],
+                                          parent_id, rank_id, treedefitemid, 0)
+                    
+                # Accepted subspecies
+                elif row['AcceptedSubspecies'] != '':
+                    accepted_node = Taxon(0,
+                                          row['AcceptedSubspecies'],
+                                          row['Genus'] + ' ' + row['AcceptedSpecies'] + ' ' + row['AcceptedSubspecies'],
+                                          row['AcceptedSpeciesAuthor'],
+                                          parent_id, 230, treedefitemid, 0)
+            
+            if accepted_node:
+                
+                # TODO Check if accepted taxon already exists
+                pass
+
+                # Post the accepted taxon node to the API
+                jsonString = accepted_node.createJsonString()
+                sp7_obj = self.sp.postSpecifyObject(self.sptype, jsonString)
+
+                # Adjust the synonym taxon accordingly 
+                taxon_node.is_accepted = False
+                taxon_node.accepted_taxon_id = sp7_obj['id']
 
         # Post the taxon node to the API
         jsonString = taxon_node.createJsonString()
@@ -126,23 +187,14 @@ class ImportSynonymTool(TreeNodeTool):
 
         return taxon_node
   
+    def addSynonymNode(self, headers, row):
+        """
+        
+        """
+       
+
+
+        pass
 
     def __str__(self) -> None:
-        """
-        """
         return "ImportSynonymTool"
-
-
-"""
-
-Species Author
-Subspecies
-Subspecies Author
-isAccepted
-AcceptedGenus
-AcceptedSpecies
-AcceptedSpeciesAuthor
-AcceptedSubspecies
-AcceptedSubspeciesAuthor
-
-"""

@@ -13,6 +13,8 @@
 
 """
 
+import datetime
+
 # Internal Dependencies 
 from models.treenode import TreeNode
 
@@ -21,7 +23,7 @@ class Taxon(TreeNode):
     Class encapsulating storage tree node relevant methods 
     """
 
-    def __init__(self, id, name, fullname, taxon_author, parent_id, rank_id, treedefitemid, treedefid) -> None:
+    def __init__(self, id=None, name=None, fullname=None, taxon_author=None, parent_id=None, rank_id=None, treedefitemid=None, treedefid=None, is_accepted = True, accepted_taxon_id = None, is_hybrid = False) -> None:
         """
         Constructor
         CONTRACT 
@@ -38,21 +40,63 @@ class Taxon(TreeNode):
         self.sptype = 'taxon'        
         self.author = taxon_author
 
+        self.is_accepted = is_accepted
+        self.accepted_taxon_id = accepted_taxon_id
+        self.is_hybrid = is_hybrid
+
     def createJsonString(self) -> str:
         """
-        Creates json representation of the object for posting or putting to the API. 
+        Creates JSON representation of the object for posting or putting to the API.
         """
-       
-        obj = {'fullname': self.fullname,
-                'name': self.name,
-                'rankid': self.rank,
-                'parent': f'/api/specify/{self.sptype}/{self.parent_id}/', 
-                'treedefid': f'/api/specify/{self.sptype}/{self.treedef_id}/', 
-                'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
-                'author': self.author
-            }
+
+        # Create the JSON object
+        obj = {
+            'fullname': self.fullname,
+            'name': self.name,
+            'rankid': self.rank,
+            'parent': f'/api/specify/{self.sptype}/{self.parent_id}/',
+            'definition': f'/api/specify/{self.sptype}treedef/{self.treedef_id}/',
+            'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
+            'author': self.author,
+            'isaccepted': str(self.is_accepted),
+            'ishybrid': str(self.is_hybrid)
+        }
+
+        # Conditionally add acceptedtaxon key
+        if not self.is_accepted:
+            obj['acceptedtaxon'] = f'/api/specify/taxon/{self.accepted_taxon_id}/'
+
+        return obj
+    
+    @classmethod
+    def init(cls, jsonObject):
+        """
+        Initialize treenode by filling it from json string contents as returned from API
+        """
+        instance = cls()
+        instance.fill(jsonObject)
+        return instance
+
+    def fill(self, jsonObject):
+        """
+        Fill treenode from json string contents as returned from API
+        """
+
+        self.id = jsonObject['id']
+        self.name = jsonObject['name']
+        self.fullname = jsonObject['fullname']
+        self.parent_id = jsonObject['parent'].split('/')[4]
+        self.definitionitem_id = jsonObject['definition'].split('/')[4]
+        self.treedef_id = jsonObject['definitionitem'].split('/')[4] 
+        self.rank = jsonObject['rankid']
+
+        self.is_accepted = bool(jsonObject['isaccepted'])
+        if not self.is_accepted:
+            self.accepted_taxon_id = jsonObject['acceptedtaxon']
         
-        return obj 
+        self.is_hybdrid = bool(jsonObject['ishybrid'])
+        self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
+        self.sptype = jsonObject['resource_uri'].split('/')[3] 
 
 """
 

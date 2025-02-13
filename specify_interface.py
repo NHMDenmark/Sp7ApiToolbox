@@ -179,12 +179,12 @@ class SpecifyInterface():
       filterString += f"&{key}={filters[key]}"
     apiCallString = f'{self.baseURL}api/specify/{objectName}/?limit={limit}&offset={offset}{filterString}&orderby={sort}'
     response = self.spSession.get(apiCallString, headers=headers, verify=False)
-    util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
+    #util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
     if response.status_code < 299:
       objectSet = json.loads(response.text)['objects'] # get collections from json string and convert into dictionary
-      util.logger.debug(' - Received %d object(s)' % len(objectSet))
+      #util.logger.debug(' - Received %d object(s)' % len(objectSet))
     else:
-      util.logger.debug(' - Failure. ')
+      util.logger.error(f"Response error: {response.text}")
     
     return objectSet 
 
@@ -196,16 +196,17 @@ class SpecifyInterface():
       objectId   (Integer) : The primary key of the object
       RETURNS fetched object 
     """ 
-    util.logger.debug('Fetching ' + objectName + ' object on id: ' + str(objectId))
+    #util.logger.debug('Fetching ' + objectName + ' object on id: ' + str(objectId))
     headers = {'content-type': 'application/json', 'X-CSRFToken': self.csrfToken, 'Referer': self.baseURL}
     apiCallString = f'{self.baseURL}api/specify/{objectName}/{objectId}/' 
-    util.logger.debug(apiCallString)
+    #util.logger.debug(apiCallString)
     response = self.spSession.get(apiCallString, headers=headers, verify=False)
-    util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
-    util.logger.debug(f' - Session cookies: {self.spSession.cookies.get_dict()}')
+    #util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
+    #util.logger.debug(f' - Session cookies: {self.spSession.cookies.get_dict()}')
     if response.status_code < 299:
       object = response.json()
     else: 
+      util.logger.error(f"Response error: {response.text}")
       raise Exception(f"Response error: {response.status_code}")
 
     return object 

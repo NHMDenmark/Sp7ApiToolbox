@@ -58,8 +58,6 @@ class ConfigurationHandler():
 
         collections = self.sp.getInitialCollections()
 
-        print(collections)
-
         app.settings['collectionId'] = collections.get(app.settings['collectionName'], None)
         print(app.settings['collectionId'])
 

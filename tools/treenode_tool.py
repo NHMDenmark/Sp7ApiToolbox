@@ -13,9 +13,10 @@
 """
 
 # Internal Dependencies 
+import specify_interface
+import global_settings as app
 from models.treenode import TreeNode
 from tools.sp7api_tool import Sp7ApiTool
-import specify_interface
 
 class TreeNodeTool(Sp7ApiTool):
     """
@@ -29,6 +30,8 @@ class TreeNodeTool(Sp7ApiTool):
         """
 
         super().__init__(specifyInterface)
+
+        self.tree_definition = self.getTreeDefinition()
 
         self.getTreeDefItems()
 
@@ -94,6 +97,28 @@ class TreeNodeTool(Sp7ApiTool):
 
         # Return the current child node if it's the last one added
         return child_node
+    
+    def createTreeNode(self, headers, row, parent_id, index):
+        """
+        Generic method for creating tree node 
+        """
+
+        rank = self.getTreeDefItem(headers[index])
+        treedefitemid = str(rank['treeentries']).split('=')[1]
+        name = row[headers[index]]
+        rank_id = rank['rankid']
+
+        # Create the tree node object
+        node = TreeNode(0, name, name, parent_id, rank_id, treedefitemid, self.tree_definition, self.sptype)
+
+        # Post the taxon node to the API
+        jsonString = node.createJsonString()
+        sp7_obj = self.sp.postSpecifyObject(self.sptype, jsonString)
+
+        # Assign the ID from the API response
+        node.id = sp7_obj['id']
+
+        return node
 
     def getTreeNode(self, child_name, parent_id):
         """ 
@@ -102,7 +127,8 @@ class TreeNodeTool(Sp7ApiTool):
 
         child_dict = self.sp.getSpecifyObjects(self.sptype, 1000, 0, {
             'name': child_name,
-            'parent': parent_id
+            'parent': parent_id, 
+            'definition': self.tree_definition
         })
 
         child_nodes = []
@@ -116,28 +142,6 @@ class TreeNodeTool(Sp7ApiTool):
 
         return None
 
-    def createTreeNode(self, headers, row, parent_id, index):
-        """
-        Generic method for creating tree node 
-        """
-
-        rank = self.getTreeDefItem(headers[index])
-        treedefitemid = str(rank['treeentries']).split('=')[1]
-        name = row[headers[index]]
-        rank_id = rank['rankid']
-
-        # Create the tree node object
-        node = TreeNode(0, name, name, parent_id, rank_id, treedefitemid, 0, self.sptype)
-
-        # Post the taxon node to the API
-        jsonString = node.createJsonString()
-        sp7_obj = self.sp.postSpecifyObject(self.sptype, jsonString)
-
-        # Assign the ID from the API response
-        node.id = sp7_obj['id']
-
-        return node
-
     def getParentId(self, parent_name, parent_rank):
         """
         Retrieve the parent id for a given parent name
@@ -150,15 +154,14 @@ class TreeNodeTool(Sp7ApiTool):
             # Not found: Create new parent node at tree root 
             root_parent = self.sp.getSpecifyObjects(self.sptype, 1, 0, {})[0]
             parent_defitemid = str(root_parent['definitionitem']).split('/')[4]
-            tree_defid = str(root_parent['definition']).split('/')[4]
             next_child_defitem = self.sp.getSpecifyObjects(f'{self.sptype}treedefitem', 1, 0, 
-                                {'parent':parent_defitemid, 'treedef':tree_defid})[0]
+                                {'parent':parent_defitemid, 'treedef':self.tree_definition})[0]
             print(next_child_defitem)
             new_parent = TreeNode(0,parent_name, parent_name, 
                                     root_parent['id'], 
                                     root_parent['rankid'], 
                                     next_child_defitem['id'], 
-                                    tree_defid, 
+                                    self.tree_definition, 
                                     self.sptype)
              
             # Return newly created parent node 
@@ -193,12 +196,25 @@ class TreeNodeTool(Sp7ApiTool):
 
         return valid
 
+    def getTreeDefinition(self):
+        """
+        Retrieve the tree definition for the tree type specified in self.sptype.
+        """
+        
+        collections = self.sp.getSpecifyObjects('collection', 1, 0, {'name': app.settings['collectionName']})
+        #if not collections: raise ValueError("No collections found with the specified name.")
+        #collection = collections[0]
+        #discipline = self.sp.getSpecifyObject('discipline', collection['discipline'].split('/')[4])    
+        #treedef_id = discipline[f'{self.sptype}treedef'].split('/')[4]
+
+        return 0 #treedef_id
+
     def getTreeDefItems(self):
         """
         
         """
         
-        self.TreeDefItems = self.sp.getSpecifyObjects(f"{self.sptype}treedefitem", sort='rankid')
+        self.TreeDefItems = self.sp.getSpecifyObjects(f"{self.sptype}treedefitem", sort='rankid', filters={"treedef":1})
 
     def getTreeDefItem(self, header):
         """
