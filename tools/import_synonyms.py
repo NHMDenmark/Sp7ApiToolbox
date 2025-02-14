@@ -28,7 +28,6 @@ class ImportSynonymTool(TreeNodeTool):
         """
 
         self.sptype = 'taxon'
-        self.tree_definition = 0
         
         super().__init__(specifyInterface)
         
@@ -38,24 +37,31 @@ class ImportSynonymTool(TreeNodeTool):
         """
 
         # Keep synonymy headers separate 
-        index = headers.index('isAccepted')
-        tax_headers = headers[:index]
-        syn_headers = headers[index:]
+        hitax_index = headers.index('Genus')        # Higher taxonomy columns index
+        acc_index   = headers.index('isAccepted')+1 # Accepted taxon columns index
+        acc_headers = headers[acc_index:]           # Accepted taxon headers        
+        syn_headers = headers[:acc_index]           # Synonym headers
+        
+        # Remove "Accepted" from accepted headers
+        #acc_headers = [header.replace('Accepted', '') for header in acc_headers]
 
         # Remove author fields for validation
-        tax_headers = [header for header in tax_headers if "Author" not in header]
+        acc_headers = [header for header in acc_headers if "Author" not in header]
+        
+        # Merge accepted taxon headers with higher taxonomy headers
+        acc_headers = headers[0:hitax_index] + acc_headers
 
         # get root of tree (Life?)
         root = self.sp.getSpecifyObjects('taxon', limit=1)[0]
         
         # Add accepted taxa nodes if they don't already exist
-        self.addChildNodes(tax_headers, row, root['id'], 0)
+        acc_node = self.addChildNodes(acc_headers, row, root['id'], 0)
 
-        # TODO? Get primary keys of accepted taxa node 
-        pass 
-        
-        #  TODO? Add synonym node to tree 
-        pass
+        # Merge synonym taxon headers with higher taxonomy headers
+        syn_headers = syn_headers + headers[hitax_index:acc_index]
+
+        # Add synonym node to tree 
+        self.createSynonymNode(syn_headers, row, acc_node)
 
     def validateRow(self, row) -> bool:
         """
@@ -89,7 +95,7 @@ class ImportSynonymTool(TreeNodeTool):
         return valid
 
 
-    def addChildNodes(self, headers, row, parent_id, index):
+    def addChildNodes(self, headers, row, parent_id, index) -> dict:
         """
         """
         return super().addChildNodes(headers, row, parent_id, index)
@@ -121,7 +127,7 @@ class ImportSynonymTool(TreeNodeTool):
             author = row[headers[index]+'Author']
         
         # Create the taxon node object
-        taxon_node = Taxon(self.tree_definition, name, fullname, author, parent_id, rank_id, treedefitemid, 0)
+        taxon_node = Taxon(0, name, fullname, author, parent_id, rank_id, treedefitemid, self.tree_definition)
 
         # TODO Handle synonymy 
         is_accepted = (row['isAccepted'] == 'Yes')        
@@ -130,45 +136,48 @@ class ImportSynonymTool(TreeNodeTool):
 
             accepted_node = None
             # Species synonym 
-            if rank_id == 220 and row['Subspecies'] == '':
+            if rank_id == 220 and row.get('Subspecies') == '':
                 # Accepted species
-                if row['AcceptedSubspecies'] == '':
-                    accepted_node = Taxon(self.tree_definition,
+                if row.get('AcceptedSubspecies') == '':
+                    accepted_node = Taxon(0,
                                           row['AcceptedSpecies'],
                                           row['Genus'] + ' ' + row['AcceptedSpecies'],
                                           row['AcceptedSpeciesAuthor'],
-                                          parent_id, rank_id, treedefitemid, 0)
+                                          parent_id, rank_id, treedefitemid, self.tree_definition)
 
                 # Accepted subspecies
-                elif row['AcceptedSubspecies'] != '':
-                    accepted_node = Taxon(self.tree_definition,
-                                          row['AcceptedSubspecies'],
-                                          row['Genus'] + ' ' + row['AcceptedSpecies'] + ' ' + row['AcceptedSubspecies'],
-                                          row['AcceptedSpeciesAuthor'],
-                                          parent_id, 230, treedefitemid, 0)
-
-            # Subspecies synonym 
-            if rank_id == 230 and row['Subspecies'] != '':
-                # Accepted species
-                if row['AcceptedSubspecies'] == '':
-                    accepted_node = Taxon(self.tree_definition,
-                                          row['AcceptedSpecies'],
-                                          row['Genus'] + ' ' + row['AcceptedSpecies'],
-                                          row['AcceptedSpeciesAuthor'],
-                                          parent_id, rank_id, treedefitemid, 0)
-                    
-                # Accepted subspecies
-                elif row['AcceptedSubspecies'] != '':
+                elif row.get('AcceptedSubspecies') != '':
                     accepted_node = Taxon(0,
                                           row['AcceptedSubspecies'],
                                           row['Genus'] + ' ' + row['AcceptedSpecies'] + ' ' + row['AcceptedSubspecies'],
                                           row['AcceptedSpeciesAuthor'],
-                                          parent_id, 230, treedefitemid, 0)
+                                          parent_id, 230, treedefitemid, self.tree_definition)
+
+            # Subspecies synonym 
+            if rank_id == 230 and row.get('Subspecies') != '':
+                # Accepted species
+                if row['AcceptedSubspecies'] == '':
+                    accepted_node = Taxon(0,
+                                          row['AcceptedSpecies'],
+                                          row['Genus'] + ' ' + row['AcceptedSpecies'],
+                                          row['AcceptedSpeciesAuthor'],
+                                          parent_id, rank_id, treedefitemid, self.tree_definition)
+                    
+                # Accepted subspecies
+                elif row.get('AcceptedSubspecies') != '':
+                    accepted_node = Taxon(0,
+                                          row['AcceptedSubspecies'],
+                                          row['Genus'] + ' ' + row['AcceptedSpecies'] + ' ' + row['AcceptedSubspecies'],
+                                          row['AcceptedSpeciesAuthor'],
+                                          parent_id, 230, treedefitemid, self.tree_definition)
             
             if accepted_node:
                 
                 # TODO Check if accepted taxon already exists
                 pass
+
+                if taxon_node.name == 'stenodactylus':
+                    pass # TODO Debugging
 
                 # Post the accepted taxon node to the API
                 jsonString = accepted_node.createJsonString()
@@ -177,6 +186,9 @@ class ImportSynonymTool(TreeNodeTool):
                 # Adjust the synonym taxon accordingly 
                 taxon_node.is_accepted = False
                 taxon_node.accepted_taxon_id = sp7_obj['id']
+
+        if taxon_node.name == 'stenodactylus':
+            pass # TODO Debugging
 
         # Post the taxon node to the API
         jsonString = taxon_node.createJsonString()
@@ -187,10 +199,26 @@ class ImportSynonymTool(TreeNodeTool):
 
         return taxon_node
   
-    def addSynonymNode(self, headers, row):
+    def createSynonymNode(self, headers, row, acc_node) -> None:
         """
+        TODO: Add synonym node to tree
+        """
+
+        syn_name = row[headers[2]]
+        full_name = row[headers[3]] + row[headers[2]]
+        author = row[headers[3]]
         
-        """
+        syn_node = Taxon(0, name = syn_name, 
+                            fullname = full_name, 
+                            taxon_author = author,
+                            parent_id = acc_node['parent_id'], 
+                            rank_id = acc_node['rank_id'], 
+                            treedefitemid = acc_node['treedefitemid'], 
+                            treedefid = self.tree_definition,
+                            is_accepted=False,
+                            accepted_taxon_id=acc_node['id'],
+                            is_hybrid=False)
+
        
 
 

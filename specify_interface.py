@@ -161,7 +161,7 @@ class SpecifyInterface():
     util.logger.debug('------------------------------')
     return object 
 
-  def getSpecifyObjects(self, objectName, limit=100, offset=0, filters={}, sort=''):
+  def getSpecifyObjects(self, objectName, limit=100, offset=0, filters={}, sort='') -> dict:
     """ 
     Generic method for fetching object sets from the Specify API based on object name 
     CONTRACT 
@@ -250,8 +250,8 @@ class SpecifyInterface():
     if response.status_code < 299:
        return response.json()
     else: 
-      raise Exception(f"Response error: {response.status_code}")
-    #return response.status_code 
+      #raise Exception(f"Response error: {response.status_code}")
+      return response.json() 
 
   def deleteSpecifyObject(self, objectName, objectId):
     """ 

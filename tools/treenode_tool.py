@@ -68,7 +68,7 @@ class TreeNodeTool(Sp7ApiTool):
         # Start recursive addition of child nodes
         self.addChildNodes(headers, row, parent_id, 1)
 
-    def addChildNodes(self, headers, row, parent_id, index) -> object:
+    def addChildNodes(self, headers, row, parent_id, index) -> dict:
         """
         Recursively add child nodes and return the last child node added.
         """
@@ -98,7 +98,7 @@ class TreeNodeTool(Sp7ApiTool):
         # Return the current child node if it's the last one added
         return child_node
     
-    def createTreeNode(self, headers, row, parent_id, index):
+    def createTreeNode(self, headers, row, parent_id, index) -> dict:
         """
         Generic method for creating tree node 
         """
@@ -120,7 +120,7 @@ class TreeNodeTool(Sp7ApiTool):
 
         return node
 
-    def getTreeNode(self, child_name, parent_id):
+    def getTreeNode(self, child_name, parent_id) -> dict:
         """ 
         Attempt to fetch tree node instance from Specify7 based on name and parent id. 
         """
@@ -198,16 +198,19 @@ class TreeNodeTool(Sp7ApiTool):
 
     def getTreeDefinition(self):
         """
-        Retrieve the tree definition for the tree type specified in self.sptype.
+        Retrieve the tree definition for the tree type specified in self.sptype 
         """
         
-        collections = self.sp.getSpecifyObjects('collection', 1, 0, {'name': app.settings['collectionName']})
-        #if not collections: raise ValueError("No collections found with the specified name.")
-        #collection = collections[0]
-        #discipline = self.sp.getSpecifyObject('discipline', collection['discipline'].split('/')[4])    
-        #treedef_id = discipline[f'{self.sptype}treedef'].split('/')[4]
+        if self.sptype != 'storage':
+            collections = self.sp.getSpecifyObjects('collection', 1, 0, {'collectionname': app.settings['collectionName']})
+            if not collections: raise ValueError("No collections found with the specified name.")
+            collection = collections[0]
+            discipline = self.sp.getSpecifyObject('discipline', collection['discipline'].split('/')[4])   
+            treedef_id =  discipline[f'{self.sptype}treedef'].split('/')[4]
+        else:  
+            treedef_id = 1
 
-        return 0 #treedef_id
+        return treedef_id
 
     def getTreeDefItems(self):
         """

@@ -6,7 +6,6 @@ from models.treenode import TreeNode
 from models.taxon import Taxon
 import tools.treenode_tool
 import tools.import_synonyms
-from unittest.mock import patch
 
 cfg = configuration.ConfigurationHandler()
 cfg.loadConfiguration('unit')
@@ -52,8 +51,8 @@ def test_validateHeaders():
 
     assert tool.validateHeaders(headers)
 
-def test_createTreeNode():
-    """ Test creating a tree node """
+def test_createAcceptedTaxonTreeNode():
+    """ Test creating an accepted taxon tree node """
     row = acc_row
     nodes = []
 
@@ -89,11 +88,44 @@ def test_createTreeNode():
     for node in nodes: 
         spi.deleteSpecifyObject('taxon', node.id)
 
-@patch('specify_interface.SpecifyInterface.getSpecifyObjects')
-@patch('specify_interface.SpecifyInterface.getSpecifyObject')
-@patch('specify_interface.SpecifyInterface.postSpecifyObject')
-@patch('specify_interface.SpecifyInterface.deleteSpecifyObject')
-def test_addAcceptedRow(mock_deleteSpecifyObject, mock_postSpecifyObject, mock_getSpecifyObject, mock_getSpecifyObjects):
+def test_createSynonymTaxonTreeNode():
+    """ Test creating an accepted taxon tree node """
+    row = syn_row
+    nodes = []
+
+    index = 0
+    parent_id = 1
+    for header in headers:
+        if header == 'SpeciesAuthor': break
+
+        node = tool.createTreeNode(headers, row, parent_id, index)
+        index = index + 1
+        
+        assert node
+
+        if node:
+            parent_id = node.id
+            nodes.append(node)
+            assert node.name == row[header]
+            if node.rank == 220:
+                assert node.fullname == row['Genus'] + ' ' + row['Species']
+                assert node.author == row['SpeciesAuthor']
+
+            taxon = spi.getSpecifyObject('taxon', node.id)
+            
+            assert taxon
+            if taxon: 
+                assert taxon['name'] == row[header]
+                if node.rank == 220:
+                    assert node.fullname == row['Genus'] + ' ' + row['Species']
+                    assert node.author == row['SpeciesAuthor']
+                    
+    # Clean up afterwards
+    nodes.reverse()
+    for node in nodes: 
+        spi.deleteSpecifyObject('taxon', node.id)
+
+def test_addAcceptedRow():
     """ Test adding accepted row """
     row = acc_row
     
@@ -145,11 +177,7 @@ def test_addAcceptedRow(mock_deleteSpecifyObject, mock_postSpecifyObject, mock_g
 
     return passed
 
-@patch('specify_interface.SpecifyInterface.getSpecifyObjects')
-@patch('specify_interface.SpecifyInterface.getSpecifyObject')
-@patch('specify_interface.SpecifyInterface.postSpecifyObject')
-@patch('specify_interface.SpecifyInterface.deleteSpecifyObject')
-def test_addSynonymRow(mock_deleteSpecifyObject, mock_postSpecifyObject, mock_getSpecifyObject, mock_getSpecifyObjects):
+def test_addSynonymRow():
     """ Test adding accepted row """
     
     row = syn_row
@@ -209,11 +237,7 @@ def test_addSynonymRow(mock_deleteSpecifyObject, mock_postSpecifyObject, mock_ge
 
     return passed
 
-@patch('specify_interface.SpecifyInterface.getSpecifyObjects')
-@patch('specify_interface.SpecifyInterface.getSpecifyObject')
-@patch('specify_interface.SpecifyInterface.postSpecifyObject')
-@patch('specify_interface.SpecifyInterface.deleteSpecifyObject')
-def test_addSubspeciesSynonymRow(mock_deleteSpecifyObject, mock_postSpecifyObject, mock_getSpecifyObject, mock_getSpecifyObjects):
+def test_addSubspeciesSynonymRow():
     """ Test adding accepted row """
     
     row = ssp_row
@@ -273,6 +297,80 @@ def test_addSubspeciesSynonymRow(mock_deleteSpecifyObject, mock_postSpecifyObjec
 
     return passed
 
+def test_validateRow():
+    """ Test validating a row """
+    row = {'Kingdom': 'Animalia', 'Phylum': 'Chordata', 'Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
+            'Genus': 'Eumetopias', 'Species': 'jubatus', 'SpeciesAuthor': 'Schreber, 1776', 'isAccepted': 'Yes', 
+            'AcceptedGenus': '', 'AcceptedSpecies': '', 'AcceptedSpeciesAuthor': ''}
+    
+    valid = tool.validateRow(row)
+    assert valid
+
+def test_validateHeaders():
+    """ Test validating headers """
+    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
+    
+    valid = tool.validateHeaders(headers)
+    assert valid
+ 
+def test_processAcceptedRow():
+    """ Test processing a row """
+    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
+    row = {'Kingdom': 'Animalia', 'Phylum': 'Chordata', 'Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
+            'Genus': 'Eumetopias', 'Species': 'jubatus', 'SpeciesAuthor': 'Schreber, 1776', 'isAccepted': 'Yes', 
+            'AcceptedGenus': '', 'AcceptedSpecies': '', 'AcceptedSpeciesAuthor': ''}
+    
+    tool.processRow(headers, row)
+    
+    # Verify that the nodes were added correctly
+    taxa = spi.getSpecifyObjects('taxon', filters={'fullname': 'Eumetopias jubatus', 'author': 'Schreber, 1776'})
+    assert taxa
+    assert taxa.__len__() > 0
+    taxon = taxa[0]
+    assert taxon
+    assert taxon['name'] == 'jubatus'
+    assert taxon['fullname'] == 'Eumetopias jubatus'
+    assert taxon['author'] == 'Schreber, 1776'
+    assert taxon['isaccepted'] == True
+
+def test_processSynonymRow():
+    """Test processing a taxonomic synonym row and verify its correct insertion."""
+    # Define the headers and a sample row of taxonomic data
+    headers = [
+        'Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species',
+        'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor'
+    ]
+    row = {
+        'Kingdom': 'Animalia',
+        'Phylum': 'Chordata',
+        'Class': 'Amphibia',
+        'Order': 'Anura',
+        'Family': 'Arthroleptidae',
+        'Genus': 'Arthroleptis',
+        'Species': 'stenodactylus',
+        'SpeciesAuthor': 'Smith, 1849',
+        'isAccepted': 'No',
+        'AcceptedGenus': 'Arthroleptis',
+        'AcceptedSpecies': 'stenodactylus',
+        'AcceptedSpeciesAuthor': 'Pfeffer, 1893'
+    }
+
+    # Process the row using the tool's processRow method
+    tool.processRow(headers, row)
+
+    # Retrieve the processed taxon from the data store
+    taxa = spi.getSpecifyObjects('taxon', filters={'fullname': 'Arthroleptis stenodactylus', 'author': 'Pfeffer, 1893'})
+
+    # Verify that the taxon was added correctly
+    assert taxa, "No taxa found for the given filters."
+    taxon = taxa[0]
+    assert taxon['name'] == 'Arthroleptis', f"Expected 'Arthroleptis', but got {taxon['name']}"
+    assert taxon['fullname'] == 'Arthroleptis stenodactylus', f"Expected 'Arthroleptis stenodactylus', but got {taxon['fullname']}"
+    assert taxon['author'] == 'Pfeffer, 1893', f"Expected 'Pfeffer, 1893', but got {taxon['author']}"
+    assert taxon['isaccepted'] is False, f"Expected False, but got {taxon['isaccepted']}"
+    assert taxon['acceptedtaxon'] is not None, "Accepted taxon is None."
+
+
 def test_runTool():
     """ 
     Test whether nodes were added as expected and cleaned up again 
@@ -319,48 +417,5 @@ def test_runTool():
                     assert False
             
     print("All nodes were added and verified successfully.")
-    
-def test_processRow():
-    """ Test processing a row """
-    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
-    row = {'Kingdom': 'Animalia', 'Phylum': 'Chordata', 'Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
-            'Genus': 'Eumetopias', 'Species': 'jubatus', 'SpeciesAuthor': 'Schreber, 1776', 'isAccepted': 'Yes', 
-            'AcceptedGenus': '', 'AcceptedSpecies': '', 'AcceptedSpeciesAuthor': ''}
-    
-    tool.processRow(headers, row)
-    
-    # Verify that the nodes were added correctly
-    taxon = spi.getSpecifyObject('taxon', 1)
-    assert taxon
-    assert taxon['name'] == 'Eumetopias'
-    assert taxon['fullname'] == 'Eumetopias jubatus'
-    assert taxon['author'] == 'Schreber, 1776'
-    assert taxon['isaccepted'] == True
-
-def test_validateRow():
-    """ Test validating a row """
-    row = {'Kingdom': 'Animalia', 'Phylum': 'Chordata', 'Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
-            'Genus': 'Eumetopias', 'Species': 'jubatus', 'SpeciesAuthor': 'Schreber, 1776', 'isAccepted': 'Yes', 
-            'AcceptedGenus': '', 'AcceptedSpecies': '', 'AcceptedSpeciesAuthor': ''}
-    
-    valid = tool.validateRow(row)
-    assert valid
-
-def test_validateHeaders():
-    """ Test validating headers """
-    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
-    
-    valid = tool.validateHeaders(headers)
-    assert valid
-
-
-@patch('TreeNodeTool.SpecifyInterface.getSpecifyObjects')
-def test_getTreeDefinition(mock_getSpecifyObjects):
-    # Set up the mock to return a dummy collection
-    mock_getSpecifyObjects.return_value = [{'discipline': 'some/discipline/path'}]
-
-    # Now you can call your method
-    #tree_definition = your_instance.getTreeDefinition()
-    #assert tree_definition is not None
-
+   
 
