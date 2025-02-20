@@ -34,6 +34,7 @@ class TreeNodeTool(Sp7ApiTool):
         self.tree_definition = self.getTreeDefinition()
 
         self.getTreeDefItems()
+        pass
 
     def runTool(self, args):
         """

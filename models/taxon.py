@@ -85,6 +85,7 @@ class Taxon(TreeNode):
         self.id = jsonObject['id']
         self.name = jsonObject['name']
         self.fullname = jsonObject['fullname']
+        self.author = jsonObject['author']
         self.parent_id = jsonObject['parent'].split('/')[4]
         self.definitionitem_id = jsonObject['definition'].split('/')[4]
         self.treedef_id = jsonObject['definitionitem'].split('/')[4] 

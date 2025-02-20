@@ -207,7 +207,7 @@ class SpecifyInterface():
       object = response.json()
     else: 
       util.logger.error(f"Response error: {response.text}")
-      raise Exception(f"Response error: {response.status_code}")
+      object = None
 
     return object 
 
@@ -251,7 +251,7 @@ class SpecifyInterface():
        return response.json()
     else: 
       #raise Exception(f"Response error: {response.status_code}")
-      return response.json() 
+      return None #response.json() 
 
   def deleteSpecifyObject(self, objectName, objectId):
     """ 

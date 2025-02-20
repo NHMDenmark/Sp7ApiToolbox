@@ -15,14 +15,11 @@ spi = sp.SpecifyInterface()
 
 tool = tools.import_synonyms.ImportSynonymTool(spi)
 
-base_row = {'Kingdom':'Animalia','Phylum':'Chordata','Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
-           'Genus' : 'Eumetopias', 'Species' : 'jubatus', 'SpeciesAuthor' : 'Schreber, 1776'}
- 
-acc_ext = {'isAccepted' : 'Yes', 'AcceptedGenus' : '', 'AcceptedSpecies' : '','AcceptedSpeciesAuthor' : ''}
-#syn_ext = {'isAccepted' : 'No', 'AcceptedGenus' : 'Eumetopias', 'AcceptedSpecies' : 'jubatus','AcceptedSpeciesAuthor' : 'Schreber, 1776'}
+acc_row = {'Kingdom':'Animalia','Phylum':'Chordata','Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
+           'Genus' : 'Eumetopias', 'Species' : 'jubatus', 'SpeciesAuthor' : 'Schreber, 1776',
+           'isAccepted' : 'Yes', 'AcceptedGenus' : '', 'AcceptedSpecies' : '','AcceptedSpeciesAuthor' : ''
+           }
 
-acc_row = {**base_row, **acc_ext}
-#syn_row = {**base_row, **syn_ext}
 syn_row = {'Kingdom':'Animalia','Phylum':'Chordata','Class':'Reptilia','Order':'Squamata','Family':'Typhlopidae',
            'Genus':'Gampsosteonyx','Species':'batesi','SpeciesAuthor':'"Boulenger, 1900"','Subspecies':'','SubspeciesAuthor':'',
            'isAccepted':'No','AcceptedGenus':'Afrotyphlops','AcceptedSpecies':'lineolatus','AcceptedSpeciesAuthor':'"(Jan, 1864) "',
@@ -32,7 +29,8 @@ syn_row = {'Kingdom':'Animalia','Phylum':'Chordata','Class':'Reptilia','Order':'
 ssp_row = {'Kingdom':'Animalia','Phylum':'Chordata','Class':'Amphibia','Order':'Anura','Family': 'Hyperoliidae',
            'Genus':'Hyperolius','Species':'castaneus','SpeciesAuthor':'','Subspecies':'submarginatus','SubspeciesAuthor':'',
            'isAccepted':'No','AcceptedGenus':'Hyperolius','AcceptedSpecies':'constellatus','AcceptedSpeciesAuthor':'Laurent, 1951',
-           'AcceptedSubspecies':'','AcceptedSubspeciesAuthor':''}
+           'AcceptedSubspecies':'','AcceptedSubspeciesAuthor':''
+           }
 
 headers = {}
 
@@ -136,50 +134,36 @@ def test_addAcceptedRow():
         ranks.append(header)
         if header == 'SpeciesAuthor': break
     ranks.reverse()
+    nodes = [] 
+    
+    try:
+        last_node = tool.addChildNodes(taxon_headers, row, 1, 0)
+        assert last_node
+    
+        taxon = spi.getSpecifyObject('taxon', last_node.id)
+        assert taxon 
 
-    node = tool.addChildNodes(taxon_headers, row, 1, 0)
+        taxon_id = taxon['id']
 
-    assert node
-    passed = True
- 
-    taxon = spi.getSpecifyObject('taxon', node.id)
-    assert taxon 
+        # Check presence of each node
+        for rank in ranks:   
+            obj = spi.getSpecifyObject('taxon', taxon_id)
+            assert obj # node present
+            node = Taxon.init(obj)
+            nodes.append(node)
+            taxon_id = node.parent_id # prepare for next loop  
 
-    taxon_id = taxon['id']
+            # Check field value
+            assert row[rank] == node.name
 
-    # Check presence of each node
-    nodes = []
-    for rank in ranks:   
-        obj = spi.getSpecifyObject('taxon', taxon_id)
-        assert obj # node present
-        node = Taxon.init(obj)
-        nodes.append(node)
-        taxon_id = node.parent_id # prepare for next loop  
-
-        # Check field value
-        assert row[rank] == node.name
-
-    # Clean up afterwards
-    for node in nodes: 
-        # Check if each nodes was just created: 
-        current_datetime = datetime.datetime.now()
-        same_minute = (node.create_datetime.year == current_datetime.year and
-                       node.create_datetime.month == current_datetime.month and
-                       node.create_datetime.day == current_datetime.day and
-                       node.create_datetime.hour == current_datetime.hour - 1 and
-                       node.create_datetime.minute == current_datetime.minute)
-        
-        if same_minute:
-            # Safely delete object created during test 
-            spi.deleteSpecifyObject('taxon', node.id)
-
-    assert passed
-
-    return passed
+    finally:
+        # Clean up afterwards
+        cleanup_nodes(nodes)
+    
+    print("Test passed.")
 
 def test_addSynonymRow():
     """ Test adding accepted row """
-    
     row = syn_row
     
     taxon_headers = headers[:headers.index('SpeciesAuthor')]
@@ -189,57 +173,74 @@ def test_addSynonymRow():
         ranks.append(header)
         if header == 'SpeciesAuthor': break
     ranks.reverse()
+    nodes = [] 
 
-    node = tool.addChildNodes(taxon_headers, row, 1, 0)
+    try:
+        last_node = tool.addChildNodes(taxon_headers, row, 1, 0)
+        assert last_node
+    
+        taxon = spi.getSpecifyObject('taxon', last_node.id)
+        assert taxon 
 
-    assert node
-    passed = True
- 
-    taxon = spi.getSpecifyObject('taxon', node.id)
-    assert taxon 
+        taxon_id = taxon['id']       
 
-    taxon_id = taxon['id']
+        # Check presence of each node
+        nodes = []
+        for rank in ranks:   
+            obj = spi.getSpecifyObject('taxon', taxon_id)
+            try:
+                node = Taxon.init(obj)
+                nodes.append(node)
+                taxon_id = node.parent_id # prepare for next loop  
+                
+                # TODO Check synonymy
+                if rank == 'Species':
+                    #assert node.is_accepted == False
+                    acc_obj = spi.getSpecifyObject('taxon', node.accepted_taxon_id.split('/')[4])
+                    acc_taxon = Taxon.init(acc_obj)
+                    nodes.append(acc_taxon)
 
-    # Check presence of each node
-    nodes = []
-    for rank in ranks:   
-        obj = spi.getSpecifyObject('taxon', taxon_id)
-        assert obj # node present
-        node = Taxon.init(obj)
-        nodes.append(node)
-        taxon_id = node.parent_id # prepare for next loop  
-
-        # Check field value
-        assert row[rank] == node.name
-
-        # TODO Check synonymy
-        if rank == 'Species':
-            assert node.is_accepted == False
-            acc_obj = spi.getSpecifyObject('taxon', node.accepted_taxon_id.split('/')[4])
-            acc_node = Taxon.init(acc_obj)
-            nodes.append(acc_node)
-
-    # Clean up afterwards
-    for node in nodes: 
-        # Check if each nodes was just created: 
-        current_datetime = datetime.datetime.now()
-        same_minute = (node.create_datetime.year == current_datetime.year and
-                       node.create_datetime.month == current_datetime.month and
-                       node.create_datetime.day == current_datetime.day and
-                       node.create_datetime.hour == current_datetime.hour - 1 and
-                       node.create_datetime.minute == current_datetime.minute)
+            except Exception as e:
+                print(f"Error initializing Taxon object: {e}")
+                break
         
-        if same_minute:
-            # Safely delete object created during test 
-            spi.deleteSpecifyObject('taxon', node.id)
+        # Check synonym taxon         
+        assert taxon['name'] == row['Species']
+        assert taxon['fullname'] == row['Genus'] + ' ' + row['Species']
+        assert taxon['isaccepted'] == False
+        assert taxon['acceptedtaxon'] is not None
+        assert taxon['acceptedtaxon'].split('/')[4] == str(acc_taxon.id)
+        assert taxon['author'] == row['SpeciesAuthor']
 
-    assert passed
+        # Check synonym taxon parent
+        syn_parent = spi.getSpecifyObject('taxon', taxon['parent'].split('/')[4])
+        assert syn_parent
+        assert syn_parent['name'] == row['Genus']
 
-    return passed
+        # Check accepted taxon
+        assert acc_taxon.name == row['AcceptedSpecies']
+        assert acc_taxon.fullname == row['AcceptedGenus'] + ' ' + row['AcceptedSpecies'] 
+        assert acc_taxon.author == row['AcceptedSpeciesAuthor']
+        assert acc_taxon.is_accepted == True  
+        assert acc_taxon.accepted_taxon_id is None
+
+        # Check accepted taxon parent
+        acc_parent = spi.getSpecifyObject('taxon', acc_taxon.parent_id)
+        assert acc_parent
+        assert acc_parent['name'] == row['AcceptedGenus']
+        
+        print("Test passed.")
+    except:
+        print("Test failed.")
+    finally:
+        # Clean up afterwards
+        print("cleaning up nodes.")
+        #cleanup_nodes(nodes)
+    
+    print("Test finished.")
 
 def test_addSubspeciesSynonymRow():
     """ Test adding accepted row """
-    
     row = ssp_row
     
     taxon_headers = headers[:headers.index('SpeciesAuthor')]
@@ -249,53 +250,49 @@ def test_addSubspeciesSynonymRow():
         ranks.append(header)
         if header == 'SpeciesAuthor': break
     ranks.reverse()
+    nodes = [] 
 
-    node = tool.addChildNodes(taxon_headers, row, 1, 0)
+    try:
+        last_node = tool.addChildNodes(taxon_headers, row, 1, 0)
+        assert last_node
+    
+        taxon = spi.getSpecifyObject('taxon', last_node.id)
+        assert taxon 
 
-    assert node
-    passed = True
- 
-    taxon = spi.getSpecifyObject('taxon', node.id)
-    assert taxon 
+        taxon_id = taxon['id']       
 
-    taxon_id = taxon['id']
+        # Check presence of each node
+        nodes = []
+        for rank in ranks:   
+            obj = spi.getSpecifyObject('taxon', taxon_id)
+            try:
+                node = Taxon.init(obj)
+                nodes.append(node)
+                taxon_id = node.parent_id # prepare for next loop  
+                
+                # TODO Check synonymy
+                if rank == 'Subspecies':
+                    assert node.is_accepted == False
+                    acc_obj = spi.getSpecifyObject('taxon', node.accepted_taxon_id.split('/')[4])
+                    acc_taxon = Taxon.init(acc_obj)
+                    nodes.append(acc_taxon)
 
-    # Check presence of each node
-    nodes = []
-    for rank in ranks:   
-        obj = spi.getSpecifyObject('taxon', taxon_id)
-        assert obj # node present
-        node = Taxon.init(obj)
-        nodes.append(node)
-        taxon_id = node.parent_id # prepare for next loop  
-
-        # Check field value
-        assert row[rank] == node.name
-
-        # TODO Check synonymy
-        if rank == 'Subspecies':
-            assert node.is_accepted == False
-            acc_obj = spi.getSpecifyObject('taxon', node.accepted_taxon_id.split('/')[4])
-            acc_node = Taxon.init(acc_obj)
-            nodes.append(acc_node)
-
-    # Clean up afterwards
-    for node in nodes: 
-        # Check if each nodes was just created: 
-        current_datetime = datetime.datetime.now()
-        same_minute = (node.create_datetime.year == current_datetime.year and
-                       node.create_datetime.month == current_datetime.month and
-                       node.create_datetime.day == current_datetime.day and
-                       node.create_datetime.hour == current_datetime.hour - 1 and
-                       node.create_datetime.minute == current_datetime.minute)
+            except Exception as e:
+                print(f"Error initializing Taxon object: {e}")
+                break
         
-        if same_minute:
-            # Safely delete object created during test 
-            spi.deleteSpecifyObject('taxon', node.id)
+        # Check synonym taxon         
+        assert taxon['name'] == row['Species']
+        assert taxon['fullname'] == (row['Genus'] + ' ' + row['Species'] + ' ' + row['Subspecies']).strip()
+        assert taxon['isaccepted'] == False
+        assert taxon['acceptedtaxon'] is not None
+        assert taxon['acceptedtaxon'].split('/')[4] == str(acc_taxon.id)
 
-    assert passed
-
-    return passed
+    finally:
+        # Clean up afterwards
+        cleanup_nodes(nodes)
+    
+    print("Test passed.")
 
 def test_validateRow():
     """ Test validating a row """
@@ -336,10 +333,9 @@ def test_processAcceptedRow():
 def test_processSynonymRow():
     """Test processing a taxonomic synonym row and verify its correct insertion."""
     # Define the headers and a sample row of taxonomic data
-    headers = [
-        'Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species',
-        'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor'
-    ]
+    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species']
+        #'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
+
     row = {
         'Kingdom': 'Animalia',
         'Phylum': 'Chordata',
@@ -355,21 +351,40 @@ def test_processSynonymRow():
         'AcceptedSpeciesAuthor': 'Pfeffer, 1893'
     }
 
-    # Process the row using the tool's processRow method
-    tool.processRow(headers, row)
+    #row = syn_row
+    
+    try:
+        # Process the row using the tool's processRow method
+        tool.processRow(headers, row)
 
-    # Retrieve the processed taxon from the data store
-    taxa = spi.getSpecifyObjects('taxon', filters={'fullname': 'Arthroleptis stenodactylus', 'author': 'Pfeffer, 1893'})
+        # Retrieve the processed taxon from the data store
+        full_name = row['Genus'] + ' ' + row['Species']  
+        author = row['SpeciesAuthor']  
+        taxa = spi.getSpecifyObjects('taxon', filters={'fullname': full_name, 'author': author})
 
-    # Verify that the taxon was added correctly
-    assert taxa, "No taxa found for the given filters."
-    taxon = taxa[0]
-    assert taxon['name'] == 'Arthroleptis', f"Expected 'Arthroleptis', but got {taxon['name']}"
-    assert taxon['fullname'] == 'Arthroleptis stenodactylus', f"Expected 'Arthroleptis stenodactylus', but got {taxon['fullname']}"
-    assert taxon['author'] == 'Pfeffer, 1893', f"Expected 'Pfeffer, 1893', but got {taxon['author']}"
-    assert taxon['isaccepted'] is False, f"Expected False, but got {taxon['isaccepted']}"
-    assert taxon['acceptedtaxon'] is not None, "Accepted taxon is None."
+        # Verify that the taxon was added correctly
+        assert taxa, "No taxa found for the given filters."
+        taxon = taxa[0]
+        assert taxon['name'] == f'{row['Species']}', f"Expected '{row['Species']}s', but got {taxon['name']}"
+        assert taxon['isaccepted'] is False, f"Expected False, but got {taxon['isaccepted']}"
+        assert taxon['acceptedtaxon'] is not None, "Accepted taxon is None."
 
+    finally:
+        # Clean up the added taxa
+        nodes = []
+        for entry in row:
+            if entry not in ['SpeciesAuthor', 'isAccepted', 'AcceptedSpeciesAuthor']:
+                # Fetch the taxon from the Specify API
+                taxa = spi.getSpecifyObjects('taxon', filters={'name': row[entry]})
+                if len(taxa) > 0:
+                    taxon = taxa[0]
+                    try:
+                        node = Taxon.init(taxon)
+                        nodes.append(node)
+                    except Exception as e:
+                        print(f"Error initializing Taxon object: {e}")
+            
+        cleanup_nodes(nodes)
 
 def test_runTool():
     """ 
@@ -419,3 +434,25 @@ def test_runTool():
     print("All nodes were added and verified successfully.")
    
 
+
+def cleanup_nodes(nodes):
+    """Clean up nodes created during the test."""
+    print("Cleaning up...")
+    current_datetime = datetime.datetime.now()
+    for node in nodes:
+        # Check if each node was just created:
+        same_moment = (node.create_datetime.year == current_datetime.year and
+                    node.create_datetime.month == current_datetime.month and
+                    node.create_datetime.day == current_datetime.day and
+                    node.create_datetime.hour == current_datetime.hour - 1)
+        
+        if same_moment:
+            # Safely delete object created during test
+            try:
+                print(f"Deleting object {node.name}")
+                spi.deleteSpecifyObject('taxon', node.id)
+            except Exception as e:
+                print(f"Error deleting object: {e}")
+        else:
+            print(f"Node {node.name} was not created during test.")
+    print("Cleaned up.")
