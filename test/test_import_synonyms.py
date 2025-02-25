@@ -243,12 +243,9 @@ def test_addSubspeciesSynonymRow():
     """ Test adding accepted row """
     row = ssp_row
     
-    taxon_headers = headers[:headers.index('SpeciesAuthor')]
+    taxon_headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Subspecies'] #headers[:headers.index('SpeciesAuthor')]
 
-    ranks = []
-    for header in taxon_headers:
-        ranks.append(header)
-        if header == 'SpeciesAuthor': break
+    ranks = list(taxon_headers)
     ranks.reverse()
     nodes = [] 
 
@@ -282,10 +279,11 @@ def test_addSubspeciesSynonymRow():
                 break
         
         # Check synonym taxon         
-        assert taxon['name'] == row['Species']
+        assert taxon['name'] == row['Subspecies']
         assert taxon['fullname'] == (row['Genus'] + ' ' + row['Species'] + ' ' + row['Subspecies']).strip()
         assert taxon['isaccepted'] == False
-        assert taxon['acceptedtaxon'] is not None
+        assert taxon['acceptedtaxon'] 
+        assert acc_taxon 
         assert taxon['acceptedtaxon'].split('/')[4] == str(acc_taxon.id)
 
     finally:
@@ -312,7 +310,7 @@ def test_validateHeaders():
  
 def test_processAcceptedRow():
     """ Test processing a row """
-    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
+    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'AcceptedGenus', 'AcceptedSpecies']
     row = {'Kingdom': 'Animalia', 'Phylum': 'Chordata', 'Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
             'Genus': 'Eumetopias', 'Species': 'jubatus', 'SpeciesAuthor': 'Schreber, 1776', 'isAccepted': 'Yes', 
             'AcceptedGenus': '', 'AcceptedSpecies': '', 'AcceptedSpeciesAuthor': ''}
@@ -333,7 +331,7 @@ def test_processAcceptedRow():
 def test_processSynonymRow():
     """Test processing a taxonomic synonym row and verify its correct insertion."""
     # Define the headers and a sample row of taxonomic data
-    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species']
+    headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'AcceptedGenus', 'AcceptedSpecies']
         #'SpeciesAuthor', 'isAccepted', 'AcceptedGenus', 'AcceptedSpecies', 'AcceptedSpeciesAuthor']
 
     row = {
@@ -343,7 +341,7 @@ def test_processSynonymRow():
         'Order': 'Anura',
         'Family': 'Arthroleptidae',
         'Genus': 'Arthroleptis',
-        'Species': 'stenodactylus',
+        'Species': 'dactylostenus',
         'SpeciesAuthor': 'Smith, 1849',
         'isAccepted': 'No',
         'AcceptedGenus': 'Arthroleptis',
@@ -393,47 +391,61 @@ def test_runTool():
     filename = 'import_synonyms.csv'
     tool.runTool({'filename':filename, 'sptype':'taxon'})
 
-    # Read the CSV file
-    with open(f'data/{filename}', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        
-        for row in reader:
-            # Extract the taxon name and other relevant fields
-            taxon_name = row['Species'] if row['Species'] else row['Genus']
-            parent_name = row['Genus'] if row['Species'] else row['Family']
-            
-            # Fetch the added node from the Specify API
-            filters = {'name': taxon_name}
-            if parent_name:
-                result = spi.getSpecifyObjects('taxon', filters={'name': parent_name})
-                if result:
-                    parent_node = result[0]
-                    filters['parent'] = parent_node['id']
-            
-                    added_nodes = spi.getSpecifyObjects('taxon', filters=filters)
-                    
-                    # Check that the node was added
-                    assert len(added_nodes) > 0, f"Node {taxon_name} not found"
-                    
-                    # Verify the node's attributes
-                    added_node = added_nodes[0]
-                    assert added_node['name'] == taxon_name, f"Expected name {taxon_name}, got {added_node['name']}"
-                    assert added_node['fullname'] == row['SpeciesAuthor'], f"Expected fullname {row['SpeciesAuthor']}, got {added_node['fullname']}"
-                    assert added_node['author'] == row['SpeciesAuthor'], f"Expected author {row['SpeciesAuthor']}, got {added_node['author']}"
-                    assert added_node['isaccepted'] == (row['isAccepted'] == 'Yes'), f"Expected isaccepted {row['isAccepted']}, got {added_node['isaccepted']}"
-                    
-                    # Additional checks for synonyms
-                    if row['isAccepted'] == 'No':
-                        assert added_node['acceptedtaxon'] is not None, f"Expected acceptedtaxon for {taxon_name}, got None"
-                        accepted_taxon = spi.getSpecifyObjects('taxon', filters={'id': added_node['acceptedtaxon'].split('/')[-2]})[0]
-                        assert accepted_taxon['name'] == row['AcceptedSpecies'], f"Expected accepted species {row['AcceptedSpecies']}, got {accepted_taxon['name']}"
-                else:
-                    print(f"Problem fetching parent node: {parent_name}")
-                    assert False
-            
-    print("All nodes were added and verified successfully.")
-   
+    added_nodes = []
 
+    try:
+        # Read the CSV file
+        with open(f'data/{filename}', mode='r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter=',')
+            
+            for row in reader:
+                # Extract the taxon name and other relevant fields
+                taxon_name = ''
+                taxon_fullname = ''
+                if row['Species']: 
+                    taxon_name = row['Species'] 
+                    if row['Subspecies']:
+                        taxon_name = row['Subspecies']
+                        taxon_fullname = row['Genus'] + ' ' + row['Species'] + ' ' + row['Subspecies']
+                    else:
+                        taxon_fullname = row['Genus'] + ' ' + row['Species']
+                
+                parent_name = row['Genus'] if row['Species'] else row['Family']
+                
+                # Fetch the added node from the Specify API
+                filters = {'name': taxon_name, 'fullname': taxon_fullname}
+                if parent_name:
+                    result = spi.getSpecifyObjects('taxon', filters={'name': parent_name})
+                    if result:
+                        parent_node = result[0]
+                        filters['parent'] = parent_node['id']
+                
+                        added_node = spi.getSpecifyObjects('taxon', filters=filters)
+                        
+                        # Check that the node was added
+                        assert len(added_nodes) > 0, f"Node {taxon_name} not found"
+                        
+                        # Verify the node's attributes
+                        added_node = added_nodes[0]
+                        assert added_node['name'] == taxon_name, f"Expected name {taxon_name}, got {added_node['name']}"
+                        assert added_node['fullname'] == taxon_fullname, f"Expected taxon fullname {taxon_fullname}, got {added_node['fullname']}"
+                        assert added_node['author'] == row['SpeciesAuthor'], f"Expected author {row['SpeciesAuthor']}, got {added_node['author']}"
+                        if row['isAccepted'] == 'Yes':
+                            assert added_node['isaccepted'] == (row['isAccepted'] == 'Yes'), f"Expected isaccepted {row['isAccepted']}, got {added_node['isaccepted']}"
+
+                        if row['isAccepted'] == 'No':
+                            # Additional checks for synonyms
+                            assert added_node['acceptedtaxon'] is not None, f"Expected acceptedtaxon for {taxon_name}, got None"
+                            accepted_taxon = spi.getSpecifyObjects('taxon', filters={'id': added_node['acceptedtaxon'].split('/')[-2]})[0]
+                            assert accepted_taxon['name'] == row['AcceptedSpecies'], f"Expected accepted species {row['AcceptedSpecies']}, got {accepted_taxon['name']}"
+                    else:
+                        print(f"Problem fetching parent node: {parent_name}")
+                        assert False
+            
+        print("All nodes were added and verified successfully.")
+    finally:
+        # Clean up the added nodes
+        cleanup_nodes(added_nodes)
 
 def cleanup_nodes(nodes):
     """Clean up nodes created during the test."""

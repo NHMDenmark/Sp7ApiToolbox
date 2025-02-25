@@ -39,6 +39,7 @@ class Taxon(TreeNode):
         
         self.sptype = 'taxon'        
         self.author = taxon_author
+        self.rank = rank_id
 
         self.is_accepted = is_accepted
         self.accepted_taxon_id = accepted_taxon_id
