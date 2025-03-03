@@ -475,9 +475,6 @@ def test_runTool():
                 author = node.author                
 
                 filters = {'name': taxon_name, 'fullname': taxon_fullname,'parent': parentid, 'author': author}
-                
-                if taxon_fullname == 'Anolis Norops carolinensis':
-                    print('here')
 
                 taxa = spi.getSpecifyObjects('taxon', filters=filters)
                 
@@ -492,10 +489,11 @@ def test_runTool():
 
                 if row['isAccepted'] == 'No' and node['rankid'] > 190:
                     # Additional checks for synonyms
+                    print(f"Checking node {taxon_name} as a synonym of {row['AcceptedSpecies']}")
                     #assert node['acceptedtaxon'] is not None, f"Expected acceptedtaxon for {taxon_name}, got None"
                     #accepted_taxon = spi.getSpecifyObjects('taxon', filters={'id': node['acceptedtaxon'].split('/')[-2]})[0]
-                    # TODO assert accepted_taxon['name'] == row['AcceptedSpecies'], f"Expected accepted species {row['AcceptedSpecies']}, got {accepted_taxon['name']}"                
-                    print(f"Checking node {taxon_name} as a synonym of {row['AcceptedSpecies']}")
+                    #assert accepted_taxon['name'] == row['AcceptedSpecies'], f"Expected accepted species {row['AcceptedSpecies']}, got {accepted_taxon['name']}"                
+                    
             
         print("All nodes were added and verified successfully.")
     except Exception as e:
