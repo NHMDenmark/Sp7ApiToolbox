@@ -1,0 +1,7 @@
+{
+    "mode":       "test1",
+    "domain":     "https://specify-test1.science.ku.dk/", 
+    "collection": "NHMD Herpetology", 
+    "username":   "sp7apitool", 
+    "password":   "sp7apitool"
+}

@@ -59,7 +59,6 @@ class ConfigurationHandler():
         collections = self.sp.getInitialCollections()
 
         app.settings['collectionId'] = collections.get(app.settings['collectionName'], None)
-        print(app.settings['collectionId'])
 
     def loadTools(self):
         """

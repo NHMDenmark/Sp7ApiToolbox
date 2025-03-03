@@ -16,6 +16,7 @@ import requests # Documentation: https://requests.readthedocs.io/en/latest/api/
 import json 
 import urllib3
 import traceback
+import urllib.parse
 
 # Internal Dependencies
 import util
@@ -176,7 +177,8 @@ class SpecifyInterface():
     headers = {'content-type': 'application/json', 'X-CSRFToken': self.csrfToken, 'Referer': self.baseURL}
     filterString = ""
     for key in filters:
-      filterString += f"&{key}={filters[key]}"
+        encoded_value = urllib.parse.quote(str(filters[key]))
+        filterString += f"&{key}={encoded_value}"
     apiCallString = f'{self.baseURL}api/specify/{objectName}/?limit={limit}&offset={offset}{filterString}&orderby={sort}'
     response = self.spSession.get(apiCallString, headers=headers, verify=False)
     #util.logger.debug(f' - Response: {str(response.status_code)} {response.reason}')
@@ -227,12 +229,12 @@ class SpecifyInterface():
     response = self.spSession.put(apiCallString, data=json.dumps(specifyObject), headers=headers)
     #response = requests.put(apiCallString, data=specifyObject, json=specifyObject, headers=headers)
     util.logger.debug(f' - Response: {str(response.status_code)} response.reason')
-    # if response.status_code < 299:
-    #   object = response.json()
-    # else: 
-    #  object = None
-    # return object 
-    return response.status_code 
+    if response.status_code < 299:
+      object = response.json()
+    else: 
+      object = None
+    return object 
+    #return response.status_code 
 
   def postSpecifyObject(self, objectName, specifyObject):
     """ 

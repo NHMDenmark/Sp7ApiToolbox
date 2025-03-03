@@ -57,8 +57,6 @@ class MassAddStorageNodeTool(TreeNodeTool):
         Handle row by adding child storage location 
         """
 
-        print(f'Adding node: {row}')
-
         self.addTreeNode(headers, row)
     
     def validateRow(self, row) -> bool:

@@ -65,8 +65,6 @@ class Sp7ApiTool:
         with open(f'data/{filename}', mode='r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file, delimiter=',') # TODO Specify delimiter for files 
             headers = csv_reader.fieldnames
-            #print(f"CSV Headers: {headers}")
-
             if self.validateHeaders(headers):
                 for row in csv_reader:
                     if self.validateRow(row):

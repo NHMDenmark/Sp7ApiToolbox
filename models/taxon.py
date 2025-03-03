@@ -59,8 +59,8 @@ class Taxon(TreeNode):
             'definition': f'/api/specify/{self.sptype}treedef/{self.treedef_id}/',
             'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
             'author': self.author,
-            'isaccepted': str(self.is_accepted),
-            'ishybrid': str(self.is_hybrid)
+            'isaccepted': bool(self.is_accepted),
+            'ishybrid': bool(self.is_hybrid)
         }
 
         # Conditionally add acceptedtaxon key

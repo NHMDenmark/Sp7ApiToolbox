@@ -78,7 +78,13 @@ class TreeNodeTool(Sp7ApiTool):
         if index >= len(headers): return None
 
         # Check if child node already exists
-        child_name = row[headers[index]]
+        child_name = row[headers[index]].strip()
+
+        # Skip empty entries and continue with the next index
+        if child_name == '':
+            return self.addChildNodes(headers, row, parent_id, index + 1)
+
+        # Attempt to retrieve the child node from Specify7
         child_node = self.getTreeNode(child_name, parent_id)
 
         # If no corresponding child node is found, proceed to add new child node
@@ -91,10 +97,8 @@ class TreeNodeTool(Sp7ApiTool):
             if child_node:
                 last_child_node = self.addChildNodes(headers, row, child_node.id, index + 1)
             else:
-                pass
-
-            if last_child_node:
-                return last_child_node
+                if last_child_node:
+                    return last_child_node
 
         # Return the current child node if it's the last one added
         return child_node
@@ -157,7 +161,6 @@ class TreeNodeTool(Sp7ApiTool):
             parent_defitemid = str(root_parent['definitionitem']).split('/')[4]
             next_child_defitem = self.sp.getSpecifyObjects(f'{self.sptype}treedefitem', 1, 0, 
                                 {'parent':parent_defitemid, 'treedef':self.tree_definition})[0]
-            print(next_child_defitem)
             new_parent = TreeNode(0,parent_name, parent_name, 
                                     root_parent['id'], 
                                     root_parent['rankid'], 
@@ -191,7 +194,6 @@ class TreeNodeTool(Sp7ApiTool):
         rank_names = {item['name']: item for item in self.TreeDefItems}
         
         for header in headers:
-            print(header)
             if header not in rank_names:
                 return False
 
