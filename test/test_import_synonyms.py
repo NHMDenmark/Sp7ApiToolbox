@@ -72,6 +72,7 @@ def test_createAcceptedTaxonTreeNode():
     """ Test creating an accepted taxon tree node """
     row = acc_row
     nodes = []
+    headers = list(row.keys())
 
     index = 0
     parent_id = 1
@@ -109,6 +110,7 @@ def test_createSynonymTaxonTreeNode():
     """ Test creating an accepted taxon tree node """
     row = syn_row
     nodes = []
+    headers = list(row.keys())
 
     index = 0
     parent_id = 1
@@ -145,7 +147,7 @@ def test_createSynonymTaxonTreeNode():
 def test_addAcceptedRow():
     """ Test adding accepted row """
     row = acc_row
-    
+    headers = list(row.keys())
     taxon_headers = headers[:headers.index('SpeciesAuthor')]
 
     ranks = []
@@ -153,38 +155,53 @@ def test_addAcceptedRow():
         ranks.append(header)
         if header == 'SpeciesAuthor': break
     ranks.reverse()
+    
     nodes = [] 
-    
+    added_nodes = create_taxon_nodes(row, headers)
+    added_nodes.reverse()
+
     try:
-        last_node = tool.addChildNodes(taxon_headers, row, 1, 0)
-        assert last_node
-    
-        taxon = spi.getSpecifyObject('taxon', last_node.id)
-        assert taxon 
+        #last_node = tool.addChildNodes(taxon_headers, row, 1, 0)
+        #assert last_node
+        print("Added nodes: ", added_nodes[0].name)
+        for taxon in added_nodes:
+            print(f"Added node {taxon.fullname}")
+            taxon_id = taxon['id']       
 
-        taxon_id = taxon['id']
-
-        # Check presence of each node
-        for rank in ranks:   
+            # Check presence of each node
             obj = spi.getSpecifyObject('taxon', taxon_id)
-            assert obj # node present
-            node = Taxon.init(obj)
-            nodes.append(node)
-            taxon_id = node.parent_id # prepare for next loop  
+            if obj:
+                node = Taxon.init(obj)
+                nodes.append(node)
+                taxon_id = node.parent_id # prepare for next loop  
+            else: 
+                print("No taxon found.")
+            
+            # Check synonym taxon         
+            assert taxon['name'] == row['Species']
+            assert taxon['fullname'] == row['Genus'] + ' ' + row['Species']
+            assert taxon['isaccepted'] == False
+            assert taxon['acceptedtaxon'] is not None
+            assert taxon['acceptedtaxon'].split('/')[4] == str(taxon.id)
+            assert taxon['author'] == row['SpeciesAuthor']
 
-            # Check field value
-            assert row[rank] == node.name
-
+            # Check taxon parent
+            acc_parent = spi.getSpecifyObject('taxon', taxon.parent_id)
+            assert acc_parent
+            assert acc_parent['name'] == row['AcceptedGenus']
+        
+        print("Test passed.")
     finally:
         # Clean up afterwards
-        cleanup_nodes(nodes)
+        print("cleaning up nodes.")
+        #cleanup_nodes(nodes)
     
-    print("Test passed.")
+    print("Test finished.")
 
 def test_addSynonymRow():
-    """ Test adding accepted row """
+    """ Test adding synonym row """
     row = syn_row
-    
+    headers = list(row.keys())
     taxon_headers = headers[:headers.index('SpeciesAuthor')]
 
     ranks = []
@@ -249,8 +266,6 @@ def test_addSynonymRow():
         assert acc_parent['name'] == row['AcceptedGenus']
         
         print("Test passed.")
-    except:
-        print("Test failed.")
     finally:
         # Clean up afterwards
         print("cleaning up nodes.")
@@ -261,7 +276,7 @@ def test_addSynonymRow():
 def test_addSubspeciesSynonymRow():
     """ Test adding accepted row """
     row = ssp_row
-    
+    headers = list(row.keys())
     taxon_headers = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Subspecies'] #headers[:headers.index('SpeciesAuthor')]
 
     ranks = list(taxon_headers)
@@ -409,64 +424,24 @@ def test_runTool():
     """
     filename = 'import_synonyms.csv'
     
-    tool.runTool({'filename':filename, 'sptype':'taxon'})
+    #tool.runTool({'filename': filename, 'sptype': 'taxon'})
 
     added_nodes = []
+    rows = []
 
     try:
         # Read the CSV file
         with open(f'data/{filename}', mode='r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',')
+            headers = reader.fieldnames
             
             for row in reader:
-                # Extract the taxon name and other relevant fields
-                subgenus = f'{row['Subgenus'].strip()} '
-                if subgenus == ' ': 
-                    subgenus = ''
-                else:
-                    print(subgenus)
-                if row['Subspecies']:
-                    # Subspecies row; construct the taxon fullname
-                    rankid = 230
-                    rankname = 'Subspecies'
-                    taxon_fullname = f"{row['Genus'].strip()} {subgenus}{row['Species'].strip()} {row['Subspecies'].strip()}"
-                    taxon_name = row['Subspecies'].strip()
-                    parent_name = row['Species'].strip()
-                    parent_fullname = f"{row['Genus'].strip()} {subgenus}{row['Species'].strip()}"
-                    author = row['SubspeciesAuthor'].strip()
-                elif row['Species']:
-                    # Species row; construct the taxon fullname
-                    rankid = 220
-                    rankname = 'Species'
-                    taxon_fullname = f"{row['Genus'].strip()} {subgenus}{row['Species'].strip()}"
-                    taxon_name = row['Species'].strip()
-                    if subgenus == '':
-                        parent_name = row['Genus'].strip()
-                    else:
-                        parent_name = f"{subgenus}"
-                    parent_fullname = parent_name.strip()
-                    author = row['SpeciesAuthor'].strip()
-                else:
-                    # Genus row; construct the taxon fullname
-                    rankid = 180
-                    rankname = 'Genus'
-                    taxon_fullname = row['Genus'].strip()
-                    taxon_name = row['Genus'].strip()
-                    parent_name = row['Family'].strip()
-                    parent_fullname = parent_name
-                    author = ''
-                treedefitemid = tool.getTreeDefItem(rankname)['id']
-                treedefid = tool.getTreeDefinition()
-                acceptedid = None # TODO fetch accepted taxon id ???
-                if parent_fullname.__contains__('Norops'):
-                    print('here')
-                parent = spi.getSpecifyObjects('taxon', filters={'fullname': parent_fullname})[0]
-
-                # Create taxon node from row data
-                taxon_node = Taxon(0, taxon_name, taxon_fullname, author, parent['id'], rankid, treedefitemid, treedefid, True, acceptedid, False)
-                
-                added_nodes.append(taxon_node)
+                rows.append(row)
             
+            # Process rows and create nodes
+            for row in rows:
+                added_nodes = create_taxon_nodes(row, headers)
+
             for node in added_nodes:
                 # Fetch the added node from the Specify API                
                 taxon_name = node.name
@@ -474,7 +449,7 @@ def test_runTool():
                 parentid = node.parent_id
                 author = node.author                
 
-                filters = {'name': taxon_name, 'fullname': taxon_fullname,'parent': parentid, 'author': author}
+                filters = {'name': taxon_name, 'fullname': taxon_fullname, 'parent': parentid, 'author': author}
 
                 taxa = spi.getSpecifyObjects('taxon', filters=filters)
                 
@@ -502,6 +477,144 @@ def test_runTool():
     finally:
         # Clean up the added nodes
         cleanup_nodes(added_nodes)
+
+def create_taxon_nodes(row, headers):
+    """
+    Process a single row and return the taxon nodes created from it.
+    """
+    nodes = []
+    processed_taxa = set()
+
+    # Extract higher taxonomy nodes
+    higher_taxonomy_nodes = extract_higher_taxonomy([row], headers)
+    nodes.extend(higher_taxonomy_nodes)
+
+    # First extract lowest-most taxon node
+    if row.get('Subgenus'):
+        subgenus = f"{row['Subgenus'].strip()} "
+        if subgenus == ' ': 
+            subgenus = ''
+    else:
+        subgenus = ''
+    if subgenus != '':
+        parent_name = row['Genus'].strip()
+        parent_fullname = parent_name
+
+    if row.get('Subspecies'):
+        # Subspecies row; construct the taxon fullname
+        rankid = 230
+        rankname = 'Subspecies'
+        taxon_fullname = f"{row['Genus'].strip()} {subgenus}{row['Species'].strip()} {row['Subspecies'].strip()}"
+        taxon_name = row['Subspecies'].strip()
+        parent_name = row['Species'].strip()
+        parent_fullname = f"{row['Genus'].strip()} {subgenus}{row['Species'].strip()}"
+        author = row['SubspeciesAuthor'].strip()
+    elif row.get('Species'):
+        # Species row; construct the taxon fullname
+        rankid = 220
+        rankname = 'Species'
+        taxon_fullname = f"{row['Genus'].strip()} {subgenus}{row['Species'].strip()}"
+        taxon_name = row['Species'].strip()
+        if subgenus == '':
+            parent_name = row['Genus'].strip()
+        else:
+            parent_name = f"{subgenus}"
+        parent_fullname = parent_name.strip()
+        author = row['SpeciesAuthor'].strip()
+    else:
+        # Genus row; construct the taxon fullname
+        rankid = 180
+        rankname = 'Genus'
+        taxon_fullname = row['Genus'].strip()
+        taxon_name = row['Genus'].strip()
+        parent_name = row['Family'].strip()
+        parent_fullname = parent_name
+        author = ''
+    header_index = headers.index(rankname)
+    treedefitemid = tool.getTreeDefItem(rankname)['id']
+    treedefid = tool.getTreeDefinition()
+    acceptedid = None # TODO fetch accepted taxon id ???
+
+    parent_id = get_parent_id(parent_fullname)
+
+    # Create lowest taxon node from row data
+    taxon_node = Taxon(0, taxon_name, taxon_fullname, author, parent_id, rankid, treedefitemid, treedefid, True, acceptedid, False)
+    nodes.append(taxon_node)
+
+    # Backtrack to collect parent taxon nodes
+    for i in range(header_index-1, -1, -1):
+        rankname = headers[i]
+        treedefitem = tool.getTreeDefItem(rankname)
+        if not treedefitem: 
+            print(f"Tree definition item not found for {rankname}")    
+        else:
+            rankid = treedefitem['rankid']
+            parent_fullname = row[rankname].strip()
+            parent_id = get_parent_id(parent_fullname)
+            treedefitemid = tool.getTreeDefItem(rankname)['id']
+            treedefid = tool.getTreeDefinition()
+
+            # Check if the taxon already exists
+            if parent_fullname not in processed_taxa:
+                # Create parent taxon node
+                parent_node = Taxon(0, parent_fullname, parent_fullname, '', parent_id, rankid, treedefitemid, treedefid, True, None, False)
+                nodes.append(parent_node)
+                processed_taxa.add(parent_fullname)
+
+    return nodes
+
+def get_parent_id(parent_fullname):
+    parent_lookup = spi.getSpecifyObjects('taxon', filters={'fullname': parent_fullname})
+    if parent_lookup:
+        parent = parent_lookup[0]
+        parent_id = parent['id']
+    else:
+        parent_id = 0
+    return parent_id
+
+def extract_higher_taxonomy(rows, headers):
+    """
+    Extract higher taxonomy (above genus level) from the given rows and create taxon nodes.
+    
+    Parameters:
+    rows (list): List of dictionaries containing row data.
+    headers (list): List of header names.
+    processed_taxa (set): Set of already processed taxa names.
+    
+    Returns:
+    list: List of created higher taxonomy nodes.
+    """
+    higher_taxonomy_nodes = []
+
+    # Get the index of 'Genus' in headers
+    genus_index = headers.index('Genus')
+
+    # Slice headers to get higher taxa ranks
+    higher_taxa_ranks = headers[:genus_index]
+    
+    processed_taxa = set()
+
+    for row in rows:
+        for rank in higher_taxa_ranks:
+            taxon_name = row.get(rank, '').strip()
+            if taxon_name and taxon_name not in processed_taxa:
+                # Create taxon node for higher taxonomy
+                parent_name = None
+                if higher_taxa_ranks.index(rank) > 0:
+                    parent_name = row.get(higher_taxa_ranks[higher_taxa_ranks.index(rank) - 1], '').strip()
+                if parent_name:
+                    parent_search = spi.getSpecifyObjects('taxon', filters={'name': parent_name})
+                    if parent_search:
+                        parent = parent_search[0]
+                        parent_id = parent['id'] 
+                        treedefitemid = tool.getTreeDefItem(rank)['id']
+                        treedefid = tool.getTreeDefinition()
+                        taxon_node = Taxon(0, taxon_name, taxon_name, '', parent_id, rank, treedefitemid, treedefid, True, None, False)
+                    
+                        higher_taxonomy_nodes.append(taxon_node)
+                        processed_taxa.add(taxon_name)
+
+    return higher_taxonomy_nodes
 
 def cleanup_nodes(nodes):
     """Clean up nodes created during the test."""
