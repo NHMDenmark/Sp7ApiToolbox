@@ -220,7 +220,7 @@ class TreeNodeTool(Sp7ApiTool):
         
         """
         
-        self.TreeDefItems = self.sp.getSpecifyObjects(f"{self.sptype}treedefitem", sort='rankid', filters={"treedef":1})
+        self.TreeDefItems = self.sp.getSpecifyObjects(f"{self.sptype}treedefitem", sort='rankid', filters={"treedef":self.tree_definition})
 
     def getTreeDefItem(self, header):
         """
@@ -231,7 +231,8 @@ class TreeNodeTool(Sp7ApiTool):
             if item['name'] == header:
                 return item
         
-        raise Exception("Tree Def Item not found!")
+        return None
+        #raise Exception("Tree Def Item not found!")
 
     def getRankId(self, header):
         """

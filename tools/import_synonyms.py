@@ -31,7 +31,7 @@ class ImportSynonymTool(TreeNodeTool):
         Process the data file row by adding its constituent taxa to the tree.
         """
 
-        root = self.sp.getSpecifyObjects('taxon', limit=1)[0]
+        root = self.sp.getSpecifyObjects('taxon', limit=1, filters={'definition': self.tree_definition})[0]
         
         taxon_headers = self.extractTaxonHeaders(headers)
 
@@ -95,36 +95,39 @@ class ImportSynonymTool(TreeNodeTool):
         """
 
         rank = self.getTreeDefItem(headers[index].replace('Accepted', ''))
-        treedefitemid = str(rank['treeentries']).split('=')[1]
-        name = row[headers[index]].strip()
-        rank_id = rank['rankid']
-        
-        # Generate full name
-        fullname = self.generateFullname(row, rank_id, headers, index)
-
-        # Add author if available
-        author = row.get(headers[index] + 'Author', '').strip()
-        
-        if not name:
+        if headers[index] not in rank['name']:
             return None
+        else:
+            treedefitemid = str(rank['treeentries']).split('=')[1]
+            name = row[headers[index]].strip()
+            rank_id = rank['rankid']
+            
+            # Generate full name
+            fullname = self.generateFullname(row, rank_id, headers, index)
 
-        # Create the taxon node object
-        taxon_node = Taxon(0, name, fullname, author, parent_id, rank_id, treedefitemid, self.tree_definition)
+            # Add author if available
+            author = row.get(headers[index] + 'Author', '').strip()
+            
+            if not name:
+                return None
 
-        # Handle synonymy 
-        is_accepted = (row.get('isAccepted') == 'Yes')
-        if not is_accepted and rank_id > 190:
-            accepted_node = self.createAcceptedNode(row, parent_id, rank_id, treedefitemid)
-            if accepted_node:
-                spec_acc = self.getOrCreateAcceptedTaxon(accepted_node)
-                taxon_node.is_accepted = False
-                taxon_node.accepted_taxon_id = spec_acc['id']
+            # Create the taxon node object
+            taxon_node = Taxon(0, name, fullname, author, parent_id, rank_id, treedefitemid, self.tree_definition)
 
-        jsonString = taxon_node.createJsonString()
-        sp7_taxon = self.sp.postSpecifyObject(self.sptype, jsonString)
+            # Handle synonymy 
+            is_accepted = (row.get('isAccepted') == 'Yes')
+            if not is_accepted and rank_id > 190:
+                accepted_node = self.createAcceptedNode(row, parent_id, rank_id, treedefitemid)
+                if accepted_node:
+                    spec_acc = self.getOrCreateAcceptedTaxon(accepted_node)
+                    taxon_node.is_accepted = False
+                    taxon_node.accepted_taxon_id = spec_acc['id']
 
-        if sp7_taxon:
-            taxon_node.id = sp7_taxon['id']
+            jsonString = taxon_node.createJsonString()
+            sp7_taxon = self.sp.postSpecifyObject(self.sptype, jsonString)
+
+            if sp7_taxon:
+                taxon_node.id = sp7_taxon['id']
 
         return taxon_node
 
