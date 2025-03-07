@@ -75,10 +75,17 @@ class ImportSynonymTool(TreeNodeTool):
 
         return taxon_headers
 
-    def addChildNodes(self, headers, row, parent_id, index) -> dict:
+    def addChildNodes(self, headers, row, parent_id, index, filters={}) -> dict:
         """
         """
-        return super().addChildNodes(headers, row, parent_id, index)
+        filters = {}
+        full_name = self.generateFullname(row, headers, index)
+        if row.get(headers[index] + 'Author'): 
+            author = row.get(headers[index] + 'Author').strip()
+            filters['author'] = author
+        filters['fullname'] = full_name
+
+        return super().addChildNodes(headers, row, parent_id, index, filters)
 
     def createTreeNode(self, headers, row, parent_id, index):
         """
@@ -103,7 +110,7 @@ class ImportSynonymTool(TreeNodeTool):
             rank_id = rank['rankid']
             
             # Generate full name
-            fullname = self.generateFullname(row, rank_id, headers, index)
+            fullname = self.generateFullname(row, headers, index, rank_id)
 
             # Add author if available
             author = row.get(headers[index] + 'Author', '').strip()
@@ -131,16 +138,23 @@ class ImportSynonymTool(TreeNodeTool):
 
         return taxon_node
 
-    def generateFullname(self, row, rank_id, headers, index):
+    def generateFullname(self, row, headers, index, rank_id = None):
         """
         Generate the full name for the taxon node.
         """
-        subgenus = f" {row['Subgenus'].strip()}" if row.get('Subgenus') else ''
-        if rank_id == 220:
-            return f"{row['Genus'].strip()}{subgenus} {row['Species'].strip()}"
-        elif rank_id == 230:
-            return f"{row['Genus'].strip()}{subgenus} {row['Species'].strip()} {row['Subspecies'].strip()}"
-        return row[headers[index]].strip()
+
+        if not rank_id and index < len(headers):
+            rank_id = self.getTreeDefItem(headers[index])['rankid']
+
+        if rank_id:
+            subgenus = f" {row['Subgenus'].strip()}" if row.get('Subgenus') else ''
+            if rank_id == 220:
+                return f"{row['Genus'].strip()}{subgenus} {row['Species'].strip()}"
+            elif rank_id == 230:
+                return f"{row['Genus'].strip()}{subgenus} {row['Species'].strip()} {row['Subspecies'].strip()}"
+            return row[headers[index]].strip()  
+            
+        return ''
 
     def createAcceptedNode(self, row, parent_id, rank_id, treedefitemid):
         """
@@ -176,6 +190,7 @@ class ImportSynonymTool(TreeNodeTool):
         check_acc = self.sp.getSpecifyObjects(self.sptype, limit=1, filters={'name': accepted_node.name, 'fullname': accepted_node.fullname, 'author': accepted_node.author, 'parent': accepted_node.parent_id})
         if check_acc:
             accepted_node.id = check_acc[0]['id']
+            spec_acc = check_acc[0]
         else:
             jsonString = accepted_node.createJsonString()
             spec_acc = self.sp.postSpecifyObject(self.sptype, jsonString)

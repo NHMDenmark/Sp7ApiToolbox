@@ -69,13 +69,13 @@ class TreeNodeTool(Sp7ApiTool):
         # Start recursive addition of child nodes
         self.addChildNodes(headers, row, parent_id, 1)
 
-    def addChildNodes(self, headers, row, parent_id, index) -> dict:
+    def addChildNodes(self, headers, row, parent_id, index, filters) -> dict:
         """
         Recursively add child nodes and return the last child node added.
         """
         
         # Exit recursion when last column reached
-        if index >= len(headers): return None
+        if index >= len(headers) - 1: return None
 
         # Check if child node already exists
         child_name = row[headers[index]].strip()
@@ -85,7 +85,7 @@ class TreeNodeTool(Sp7ApiTool):
             return self.addChildNodes(headers, row, parent_id, index + 1)
 
         # Attempt to retrieve the child node from Specify7
-        child_node = self.getTreeNode(child_name, parent_id)
+        child_node = self.getTreeNode(child_name, parent_id, filters)
 
         # If no corresponding child node is found, proceed to add new child node
         if not child_node:
@@ -93,7 +93,7 @@ class TreeNodeTool(Sp7ApiTool):
             child_node = self.createTreeNode(headers, row, parent_id, index)
         
         # Recursive call for the next child node
-        if index < len(headers) - 1:
+        if index < len(headers):
             if child_node:
                 last_child_node = self.addChildNodes(headers, row, child_node.id, index + 1)
             else:
@@ -125,16 +125,18 @@ class TreeNodeTool(Sp7ApiTool):
 
         return node
 
-    def getTreeNode(self, child_name, parent_id) -> dict:
+    def getTreeNode(self, child_name, parent_id, filters={}) -> dict:
         """ 
         Attempt to fetch tree node instance from Specify7 based on name and parent id. 
         """
 
-        child_dict = self.sp.getSpecifyObjects(self.sptype, 1000, 0, {
+        filters.update({
             'name': child_name,
             'parent': parent_id, 
             'definition': self.tree_definition
         })
+
+        child_dict = self.sp.getSpecifyObjects(self.sptype, 1000, 0, filters)
 
         child_nodes = []
         for child in child_dict:
