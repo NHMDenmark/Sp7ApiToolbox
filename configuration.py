@@ -51,6 +51,7 @@ class ConfigurationHandler():
             app.settings['collectionName'] = config['collection']
             app.settings['userName'] = config['username']
             app.settings['password'] =  config['password']
+            app.settings['csrfToken'] = ''  # CSRF token is empty at this point
         else:
             raise Exception("Configuration error!") 
                 
@@ -59,6 +60,12 @@ class ConfigurationHandler():
         collections = self.sp.getInitialCollections()
 
         app.settings['collectionId'] = collections.get(app.settings['collectionName'], None)
+
+        self.sp.login(app.settings['userName'], 
+                      app.settings['password'], 
+                      app.settings['collectionId'],
+                      self.sp.getCSRFToken())
+        pass
 
     def loadTools(self):
         """

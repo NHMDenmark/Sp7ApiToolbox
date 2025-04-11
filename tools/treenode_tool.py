@@ -40,9 +40,8 @@ class TreeNodeTool(Sp7ApiTool):
         """
         Execute the tool for operation. 
         CONTRACT 
-            args (dict) : Must include the following items  
+            args (dict) : Must include the following item(s):
                             1. 'filename': name of the data file 
-                            2. 'sptype': name of the type of tree i.e. 'storage', 'taxon' or 'geography'
         """
 
         super().runTool(args)

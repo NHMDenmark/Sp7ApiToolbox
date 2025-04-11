@@ -19,6 +19,7 @@ import csv
 import global_settings as app
 import specify_interface
 import util
+import models.collection as coll
 
 class Sp7ApiTool:
     """
@@ -35,9 +36,12 @@ class Sp7ApiTool:
         """
 
         self.sp = specifyInterface
+
         user_name = app.settings['userName']
         pass_word = app.settings['password']
         coll_id   = app.settings['collectionId']
+
+        self.collection = coll.Collection(coll_id, self.sp)
         
         # Log in to Specify API and get CSFR token 
         token = self.sp.specifyLogin(user_name, pass_word, coll_id)
@@ -50,9 +54,8 @@ class Sp7ApiTool:
         """
         Execute the tool for operation. 
         CONTRACT 
-            args (dict) : Must include the following items  
-                            1. 'filename': name of the data file 
-                            2. 'sptype': name of the type of tree i.e. 'storage', 'taxon' or 'geography'
+            args (dict) : Must normally include the following items(s):  
+                            1. 'filename': name of the data file (can be omitted depending on tool) 
         """
 
         filename = args.get('filename')
@@ -69,8 +72,7 @@ class Sp7ApiTool:
                 for row in csv_reader:
                     if self.validateRow(row):
                         self.processRow(headers, row)
-
-
+    
     def processRow(self, headers, row) -> None:
         """
         Generic empty method for handling individual data file rows

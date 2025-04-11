@@ -63,12 +63,13 @@ class Main():
         Allow user interaction in CLI to select the data file for use by the tool. 
         """
 
-        self.dataFiles = os.listdir("data")
+        self.dataFiles = ["None"]
+        self.dataFiles.extend(os.listdir("data"))
 
         print("\nChoose your datafile:")
-        for index, name in enumerate(self.dataFiles, start=1):
+        for index, name in enumerate(self.dataFiles, start=0):
                     print(f"{index}. {name}")
-        dataFile = int(input("\nEnter the number of the datafile you want to use: ")) - 1
+        dataFile = int(input("\nEnter the number of the datafile you want to use: "))
 
         if 0 <= dataFile < len(self.dataFiles):
             self.filename = self.dataFiles[dataFile]
@@ -91,15 +92,15 @@ class Main():
         if not entry.isnumeric():
             print("Invalid choice. Please try again.")
             self.selectTool()
-
-        choice = int(entry) - 1
-
-        if 0 <= choice < len(self.cfg.toolKit):
-            tool_name, self.tool_instance = self.cfg.toolKit[choice]
-            print(f"\nSelected tool: {tool_name}")
         else:
-            print("Invalid choice. Please try again.")
-            self.selectTool()
+            choice = int(entry) - 1
+
+            if 0 <= choice < len(self.cfg.toolKit):
+                tool_name, self.tool_instance = self.cfg.toolKit[choice]
+                print(f"\nSelected tool: {tool_name}")
+            else:
+                print("Invalid choice. Please try again.")
+                self.selectTool()
       
 
 # Application execution entry point 
