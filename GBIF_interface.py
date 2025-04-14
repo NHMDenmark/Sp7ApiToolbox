@@ -78,26 +78,33 @@ class GBIFInterface():
     acceptedNames = []
 
     # Fetch possible alternatives with matching taxon names 
-    urlString = self.baseURL + f'{object_name}  {kingdom}&name={taxon_name}'
+    # https://api.gbif.org/v1/species/?kingdom=Plantae&name=Potentilla&limit=999
+    urlString = self.baseURL + f'{object_name}/?kingdom={kingdom}&name={taxon_name}&limit=999'
     util.logger.debug(urlString)
     try:
       response = self.spSession.get(urlString)    
       # If succesful, load response into json object 
       if response.status_code < 299:
-        result = json.loads(response.text)
+        response_text = json.loads(response.text)
     
-      # Also add main entry
-        if 'usageKey' in result: 
-          mainSpecies = self.fetchSpecies(int(result['usageKey']))
-          acceptedNames.append(mainSpecies)
-              
+      for result in response_text['results']:
+
+        # Add main entry
+        if result['taxonomicStatus'] == 'ACCEPTED':
+          if 'taxonID' in result:
+            if 'gbif' in result['taxonID']: 
+              mainSpecies = self.fetchSpecies(int(result['key']))
+              acceptedNames.append(mainSpecies)
+        else:
+          pass #print(f"Not accepted name: {result['scientificName']}")
+                
         # Check for suggested alternatives and add to accepted names list, thereby removing synonyms
-        if 'alternatives' in result:
-          matches = result['alternatives']
-          for m in matches: 
-            if 'matchtype' in m and 'status' in m: 
-              if m['matchType'] == 'EXACT' and (m['status'] == 'ACCEPTED' or m['status'] == 'DOUBTFUL'):
-                acceptedNames.append(self.getSpecies(int(m['usageKey'])))
+        #if 'alternatives' in result:
+        #  matches = result['alternatives']
+        #  for m in matches: 
+        #    if 'matchtype' in m and 'status' in m: 
+        #      if m['matchType'] == 'EXACT' and (m['status'] == 'ACCEPTED' or m['status'] == 'DOUBTFUL'):
+        #        acceptedNames.append(self.getSpecies(int(m['usageKey'])))
     except:
         util.logger.error("Error occurred fetching accepting names at GBIF API!")
         pass

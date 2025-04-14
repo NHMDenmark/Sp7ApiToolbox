@@ -83,7 +83,8 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             rankId = int(rank['rankid'])
             rankName = str(rank['name'])
             util.logger.info(f'RANK "{rankName}" ({rankId})')
-                    
+            print(f'<{rankId}>', end='')  # Handling taxon
+
             # Only look at rank genera and below 
             if rankId >= 180:
                 offset = 0
@@ -129,10 +130,10 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         # Create local taxon instance from original Specify taxon data 
         original = taxon.Taxon(self.collection.id)
         original.fill(specifyTaxon)
-        #original.parent.fill(self.sp.getSpecifyObject(original.sptype, original.parentId))
+        #original.parent.fill(self.sp.getSpecifyObject(self.sptype, original.parentId))
         original.getParent(self.sp)
         fullname = original.fullname.replace(' ','%20')
-        rankId = original.rankId
+        rankId = original.rank
 
         util.logger.info(f'Handling taxon {fullname} [{specifyTaxonId}] of rank {rankId}')
         
@@ -148,27 +149,27 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                 # Create local taxon instance from looked up Specify taxon data 
                 lookup = taxon.Taxon(self.collection.id)
                 lookup.fill(tl)
-                #lookup.parent.fill(self.sp.getSpecifyObject(lookup.sptype, lookup.parentId))
+                #lookup.parent.fill(self.sp.getSpecifyObject(self.sptype, lookup.parentId))
                 lookup.getParent(self.sp)
 
-                # If the looked up taxon isn't the same record (as per 'spid') then treat as potential duplicate 
-                # NOTE We need to compare the Specify id ('spid') and not the local id, which is always 0 until saved
-                if lookup.spid != original.spid:
+                # If the looked up taxon isn't the same record (as per 'id') then treat as potential duplicate 
+                # NOTE We need to compare the Specify id ('id') and not the local id, which is always 0 until saved
+                if lookup.id != original.id:
                     
                     # If the parents match then treat as duplicate 
-                    if lookup.parentId == original.parentId:
+                    if lookup.parent_id == original.parent_id:
                         self.handleDuplicate(original, lookup)
                     #elif lookup.y:
                     #    print('hey')
                     else:
                         # Found taxa with matching names, but different parents: Add to ambivalent cases 
-                        ambivalence = f'Ambivalence on parent taxa: {original.parent.fullname} [{original.parent.spid}] vs {lookup.parent.fullname} [{lookup.parent.spid}] '
+                        ambivalence = f'Ambivalence on parent taxa: {original.parent.fullname} [{original.parent.id}] vs {lookup.parent.fullname} [{lookup.parent.id}] '
                         util.logger.info(ambivalence)
                         original.remarks = str(original.remarks) + f' | {ambivalence}'
-                        original.duplicateSpid = lookup.spid
+                        original.duplicateid = lookup.id
                         self.ambivalentCases.append(original)
                         lookup.remarks = str(lookup.remarks) + f' | {ambivalence}'
-                        lookup.duplicateSpid = original.spid
+                        lookup.duplicateid = original.id
                         self.ambivalentCases.append(lookup)
                         print('¿', end='')
 
@@ -177,7 +178,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                         self.resolveParentTaxon(lookup) 
 
         else:
-            util.logger.info(f'Duplicate {fullname} no longer found! (Original taxon Specify id: {original.spid})')
+            util.logger.info(f'Duplicate {fullname} no longer found! (Original taxon Specify id: {original.id})')
             print('x', end='') # Duplicate no longer found 
     
     def handleDuplicate(self, original, lookup):
@@ -207,10 +208,10 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             ambivalence = f'Ambivalence on authors: {original.author} vs {lookup.author} '
             util.logger.info(ambivalence)
             original.remarks = str(original.remarks) + f' | {ambivalence}'
-            original.duplicateSpid = lookup.spid
+            original.duplicateid = lookup.id
             self.ambivalentCases.append(original)
             lookup.remarks = str(lookup.remarks) + f' | {ambivalence}'
-            lookup.duplicateSpid = original.spid
+            lookup.duplicateid = original.id
             self.ambivalentCases.append(lookup)
             print('?', end='')
         else: 
@@ -238,12 +239,12 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         """
         if target is not None and source is not None: 
             # Stop latch for user interaction (disabled)
-            if True: # input(f'Do you want to merge {source.spid} with {target.spid} (y/n)?') == 'y':
+            if True: # input(f'Do you want to merge {source.id} with {target.id} (y/n)?') == 'y':
                 # Do the actual merging 
-                print(f'|{source.spid}->{target.spid}|', end='')
+                print(f'|{source.id}->{target.id}|', end='')
                 print('{', end='')
                 start = time.time()
-                response = self.sp.mergeTaxa(source.spid, target.spid)
+                response = self.sp.mergeTreeNodes(self.sptype, source.id, target.id)
                 if response.status_code == "404":
                     util.logger.info(' - 404: Taxon already merged.')
                 elif response.status_code == "500":
@@ -252,7 +253,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                 end = time.time()
                 timeElapsed = end - start
                 print(round(timeElapsed, 2), end='}')
-                util.logger.info(f'Merged {source.spid} with {target.spid}; Time elapsed: {timeElapsed} ')
+                util.logger.info(f'Merged {source.id} with {target.id}; Time elapsed: {timeElapsed} ')
 
     def resolveAuthorNames(self, original, lookup):
         # If both original and lookup contain author data and the author is not identical, 
@@ -287,7 +288,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         RETURNS boolean : Flag to indicate whether the resolution was succesful 
         """
         util.logger.info('Resolving author name...')
-        acceptedNameMatches = self.gbif.matchName('species', taxonInstance.fullname, self.collection.spid, 'Plantae')
+        acceptedNameMatches = self.gbif.matchName('species', taxonInstance.fullname, self.collection.id, 'Plantae')
         
         nrOfMatches = len(acceptedNameMatches)
         if nrOfMatches == 1:
@@ -314,12 +315,12 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         success = False
 
         # Get taxon's currently set parent from Specify
-        currentParent = self.sp.getSpecifyObject('taxon', taxonInstance.parent.spid)
+        currentParent = self.sp.getSpecifyObject('taxon', taxonInstance.parent.id)
         if currentParent is not None: 
             currentParentName = currentParent['fullname']
             util.logger.info(f'Checking current parent taxon: {currentParentName} ')
             # Get taxon's certified parent name from GBIF 
-            matches = self.gbif.matchName('species', taxonInstance.fullname, self.collection.spid, 'Plantae')
+            matches = self.gbif.matchName('species', taxonInstance.fullname, self.collection.id, 'Plantae')
             if len(matches) >= 1:
                 # Found parent name match in GBIF 
                 match = matches[0]
@@ -349,7 +350,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                     if len(parentLookup) > 0:
                         # Instantiate parent taxon from Specify record 
                         targetParent = taxon.Taxon(self.collection.id)
-                        targetParent.fill(parentLookup[0], "Specify")
+                        targetParent.fill(parentLookup[0])
 
                         # Output token to indicate move of taxon to new parent taxon 
                         util.logger.info(f'Parents differ; Moving taxon to GBIF certified parent taxon: {parentName} ')
@@ -375,12 +376,12 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         util.logger.info(f'Updating author name at Specify for: [{taxonInstance}] to: "{acceptedAuthor}"')
         
         # Get original specify taxon record  
-        spobjOriginal = self.sp.getSpecifyObject('taxon',taxonInstance.spid)
+        spobjOriginal = self.sp.getSpecifyObject('taxon',taxonInstance.id)
         if spobjOriginal: 
             # Update the author name of the original specify taxon record 
             spobjOriginal['author'] = acceptedAuthor
             # Update the original specify taxon record through API PUT
-            return self.sp.putSpecifyObject('taxon', taxonInstance.spid, spobjOriginal)
+            return self.sp.putSpecifyObject('taxon', taxonInstance.id, spobjOriginal)
         else: 
             return 500 
 
@@ -393,17 +394,17 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         success = False
 
         # 
-        print(f'|{taxonInstance.spid}->{targetParent.spid}|', end='')
+        print(f'|{taxonInstance.id}=>{targetParent.id}|', end='')
         print('{', end='')
         start = time.time()
-        result = self.sp.moveTaxon(taxonInstance.spid, targetParent.spid)
+        result = self.sp.moveTreeNode(self.sptype, taxonInstance.id, targetParent.id)
         end = time.time()
         timeElapsed = end - start
         print(round(timeElapsed, 2), end='}')
         if result.status_code == "500": 
             util.logger.info(' - 500: Internal Server Error.')
             print('@', end= '')
-        util.logger.info(f'Moved {taxonInstance.spid} to target parent {targetParent.spid}; Time elapsed: {timeElapsed} ')
+        util.logger.info(f'Moved {taxonInstance.id} to target parent {targetParent.id}; Time elapsed: {timeElapsed} ')
                         
         # If result is OK, then mark as resolved  
         if result.status_code == '200':
@@ -425,16 +426,19 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
 
     def printLegend(self):
         print('LEGEND:')
+        print('<rank> = Taxon rank id (Genus:180, Species:220, Subspecies:230)')
         print('[id]   = Single taxon entry (id = primary key)')
         print('!      = Possible duplicate ')
         print('#      = Could not retrieve taxon ')
         print('?      = Ambivalence on authors ')
         print('¿      = Ambivalence on parent taxa ')
-        print('x      = Duplicate no longer there ')
+        print('x      = Duplicates not found ')
         print('*      = Ambiguity resolved for merge/move ')
         print('|s->t| = Merge/move request (s = taxon id, t = target id)')
+        print('|s=>t| = Merge/move request (s = taxon id, t = target parent id)')
         print(r'{t}   = Merge/move duration (t = time elapsed)')
         print('@      = An error occurred' )
+        print('----------------------------------')
         #print('[    = Start of batch ')
         #print(']    = End of batch ')
 

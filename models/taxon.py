@@ -16,6 +16,7 @@
 import datetime
 
 # Internal Dependencies 
+import util
 from models.treenode import TreeNode
 
 class Taxon(TreeNode):
@@ -100,6 +101,17 @@ class Taxon(TreeNode):
         self.is_hybdrid = bool(jsonObject['ishybrid'])
         self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
         self.sptype = jsonObject['resource_uri'].split('/')[3] 
+      
+    def getParent(self, specify_interface):
+        """ """
+        self.parent = Taxon()
+        try:
+            parentTaxonObj = specify_interface.getSpecifyObject(self.sptype, self.parent_id)
+            self.parent.fill(parentTaxonObj)
+        except:
+            util.logLine("ERROR: Failed to retrieve parent taxon.",'error')
+            
+        return self.parent 
 
 """
 

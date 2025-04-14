@@ -13,6 +13,7 @@
 """
 
 import datetime
+import util
 
 class TreeNode:
     """
@@ -35,10 +36,12 @@ class TreeNode:
         self.name = name
         self.fullname = fullname
         self.parent_id = parent_id
+        self.parent = None
         self.definitionitem_id = treedefitemid
         self.treedef_id = treedefid
         self.rank = rank_id
-        
+        self.remarks = ''
+
         self.create_datetime = datetime.datetime.now()
 
         if sptype: self.sptype = sptype
@@ -82,6 +85,17 @@ class TreeNode:
 
         self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
         self.sptype = jsonObject['resource_uri'].split('/')[3] 
+
+    def getParent(self, specify_interface):
+        """ """
+        self.parent = TreeNode()
+        try:
+            parentObj = specify_interface.getSpecifyObject(self.sptype, self.parentId)
+            self.parent.fill(parentObj)
+        except:
+            util.logLine("ERROR: Failed to retrieve parent node.",'error')
+            
+        return self.parent 
 
     def __str__(self):
         return f'[{self.sptype}] id:{self.id}, name:{self.name}, fullname = {self.fullname} '

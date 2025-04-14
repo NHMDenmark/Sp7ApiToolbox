@@ -18,7 +18,6 @@ import sys
 # Internal dependencies
 import global_settings as app
 import specify_interface
-import util
 
 # TODO Explain reason for below code
 current = os.path.dirname(os.path.realpath(__file__))
