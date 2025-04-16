@@ -88,7 +88,14 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                 raise Exception(f"File {filename} does not exist.")
             
             idList = open(f'data/{filename}', 'r')
-            taxonIds = idList.readlines() 
+            taxonIds = idList.readlines()  
+        except Exception as e:
+            # Handle any exceptions that occur during the process  
+            util.logger.error(f'Error opening file "{filename}"...')
+            util.logger.error(e)
+            print(f'An error occurred while processing the file with precollected taxon ids... ({filename})')
+
+        if len(taxonIds) > 0:
             print(f'Checking {len(taxonIds)} pre-collected taxa...')
             for taxonId in taxonIds: 
                 taxonId = int(taxonId)
@@ -98,12 +105,10 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                     # If 
                     self.handleSpecifyTaxon(specifyTaxon)
                 else:
-                    print('#', end='') #[Could not retrieve taxon]    
-        except Exception as e:
-            # Handle any exceptions that occur during the process  
-            util.logger.error(f'Error opening file "{filename}"...')
-            util.logger.error(e)
-            print(f'An error occurred while processing the file with precollected taxon ids... ({filename})')
+                    print('#', end='') #[Could not retrieve taxon]   
+        else:
+            print('No taxon ids found in the file...')
+            util.logger.info('No taxon ids found in the file...')
 
     def scan(self):
         """
@@ -175,7 +180,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         """
 
         try:
-            print('.', end='')  # Handling taxon 
+            print('>', end='')  # Handling taxon 
             specifyTaxonId = specifyTaxon['id']
             print(f'[{specifyTaxonId}]', end='')  # Handling taxon 
             # Create local taxon instance from original Specify taxon data 
@@ -515,7 +520,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
 
     def printLegend(self):
         print('LEGEND:')
-        print('.      = Handling taxon ')
+        print('>      = Handling taxon ')
         print('<rank> = Taxon rank id (Genus:180, Species:220, Subspecies:230)')
         print('[id]   = Single taxon entry (id = primary key)')
         print('!      = Possible duplicate ')
