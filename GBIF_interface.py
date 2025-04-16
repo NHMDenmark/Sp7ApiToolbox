@@ -16,6 +16,7 @@ import requests
 import json 
 import urllib3
 from pathlib import Path
+import urllib.parse
 
 # Internal Dependencies
 import util 
@@ -79,7 +80,8 @@ class GBIFInterface():
 
     # Fetch possible alternatives with matching taxon names 
     # https://api.gbif.org/v1/species/?kingdom=Plantae&name=Potentilla&limit=999
-    urlString = self.baseURL + f'{object_name}/?kingdom={kingdom}&name={taxon_name}&limit=999'
+    name = urllib.parse.quote(taxon_name)
+    urlString = self.baseURL + f'{object_name}/?kingdom={kingdom}&name={name}&limit=999'
     util.logger.debug(urlString)
     try:
       response = self.spSession.get(urlString)    
@@ -92,12 +94,10 @@ class GBIFInterface():
         # Add main entry
         if result['taxonomicStatus'] == 'ACCEPTED':
           if 'taxonID' in result:
-            if 'gbif' in result['taxonID']: 
+            if 'gbif:' in result['taxonID']: 
               mainSpecies = self.fetchSpecies(int(result['key']))
               acceptedNames.append(mainSpecies)
-        else:
-          pass #print(f"Not accepted name: {result['scientificName']}")
-                
+              
         # Check for suggested alternatives and add to accepted names list, thereby removing synonyms
         #if 'alternatives' in result:
         #  matches = result['alternatives']
@@ -110,15 +110,3 @@ class GBIFInterface():
         pass
 
     return acceptedNames
-
-def testcode():
-  #
-  gi = GBIFInterface()
-
-  acceptedNameMatches = gi.matchName('species', 'Potentilla tridentata', 688130, 'Plantae')
-
-  print(f' Found {len(acceptedNameMatches)} accepted name(s)' )
-  for match in acceptedNameMatches:
-    print(match.author)
-
-#testcode()

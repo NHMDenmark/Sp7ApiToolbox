@@ -12,7 +12,10 @@
   PURPOSE: Tool for merging storage nodes upwards towards their nearest parent 
 """
 
+import os
 import time
+import traceback
+import datetime
 
 from tools.sp7api_tool import Sp7ApiTool
 
@@ -62,9 +65,46 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         
         self.printLegend()
 
-        self.scan()
+        #self.handleQualifiedTaxa()
 
-    
+        filename = args.get('filename')
+        if filename: self.checkPrecollectedTaxa(filename)
+        
+        print('Proceeding with general scan...')
+        self.scan()
+        print('Scan complete!')
+        print('----------------------------------')
+
+    def checkPrecollectedTaxa(self, filename):
+        """
+        Function for going through list of collection taxon ids that are likely to have duplicates to be merged.  
+        The list is retrieved from a simple text file with a taxon id for each line. 
+        The text file itself is based on the results of a query joining taxa on fullname (GetTaxonDuplicates.sql in 'sql' folder). 
+        """
+        util.logger.info('**** Checking pre-collected taxon ids ****')
+        
+        try:
+            if not os.path.isfile(f'data/{filename}'):
+                raise Exception(f"File {filename} does not exist.")
+            
+            idList = open(f'data/{filename}', 'r')
+            taxonIds = idList.readlines() 
+            print(f'Checking {len(taxonIds)} pre-collected taxa...')
+            for taxonId in taxonIds: 
+                taxonId = int(taxonId)
+                #print(f'Fetching taxon with id: {taxonId}')
+                specifyTaxon = self.sp.getSpecifyObject('taxon', int(taxonId))
+                if specifyTaxon:
+                    # If 
+                    self.handleSpecifyTaxon(specifyTaxon)
+                else:
+                    print('#', end='') #[Could not retrieve taxon]    
+        except Exception as e:
+            # Handle any exceptions that occur during the process  
+            util.logger.error(f'Error opening file "{filename}"...')
+            util.logger.error(e)
+            print(f'An error occurred while processing the file with precollected taxon ids... ({filename})')
+
     def scan(self):
         """
         Function for scanning and iterating taxa retrieved from the Specify API in batches per taxon rank.         
@@ -85,12 +125,11 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             util.logger.info(f'RANK "{rankName}" ({rankId})')
             print(f'<{rankId}>', end='')  # Handling taxon
 
-            # Only look at rank genera and below 
-            if rankId >= 180:
+            # Only look at ranks below genera 
+            if rankId > 180:
                 offset = 0
                 resultCount = -1
                 while resultCount != 0:
-
                     # Fetch batches from API
                     util.logger.info(f'Fetching batch with offset: {offset}')
                     batch = self.sp.getSpecifyObjects('taxon', self.batchSize, offset, {'definition':taxontreedefid, 'rankid':f'{rankId}'})
@@ -100,20 +139,30 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
 
                     # Iterate taxa in batch 
                     for specifyTaxon in batch:
-                        t = taxon.Taxon(self.collection.id)
-                        t.fill(specifyTaxon)
-                        self.resolveAuthorName(t)
-                        self.handleSpecifyTaxon(specifyTaxon)                        
-                    print(']', end='') 
-                    
+                        try:
+                            t = taxon.Taxon(self.collection.id)
+                            t.fill(specifyTaxon)
+                            self.resolveAuthorName(t)
+                            self.handleSpecifyTaxon(specifyTaxon)
+                        except Exception as e:
+                            # Handle any exceptions that occur during the process  
+                            util.logger.error(f'Error handling taxon "{specifyTaxon['fullname']}"...')
+                            util.logger.error(e)
+                            util.logger.error(traceback.format_exc())
+                            print('@', end='') # output token to indicate error 
+
                     # Prepare for fetching next batch, by increasing offset with batchsize 
                     offset += self.batchSize
         
         # Handle Ambivalent cases: Save & export to file 
         util.logger.info('Handle ambivalent cases...')
+        print('Saving ambivalent cases to file...')
         for case in self.ambivalentCases: 
             util.logger.info(f' - {case}')
-            case.save()
+            # Save case to text file
+            with open(f'output/merge_ambivalent_cases_{datetime.datetime.now()}.txt', 'a') as f:
+                f.write(f'{case}\n')
+
         #util.logger.info(self.dx.exportTable('taxon', 'xlsx'))
 
     def handleSpecifyTaxon(self, specifyTaxon):
@@ -124,62 +173,70 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
           - Performing merge of any unambiguous duplicates after updating author info if needed 
           - Recording any ambivalent cases
         """
-        #print('.', end='')  # Handling taxon 
-        specifyTaxonId = specifyTaxon['id']
-        print(f'[{specifyTaxonId}]', end='')  # Handling taxon 
-        # Create local taxon instance from original Specify taxon data 
-        original = taxon.Taxon(self.collection.id)
-        original.fill(specifyTaxon)
-        #original.parent.fill(self.sp.getSpecifyObject(self.sptype, original.parentId))
-        original.getParent(self.sp)
-        fullname = original.fullname.replace(' ','%20')
-        rankId = original.rank
 
-        util.logger.info(f'Handling taxon {fullname} [{specifyTaxonId}] of rank {rankId}')
-        
-        # Look up taxa with matching fullname & rank
-        taxonLookup = self.sp.getSpecifyObjects('taxon', 100000, 0, 
-            {'definition':str(self.collection.discipline.taxontreedefid), 'rankid':f'{rankId}', 'fullname':f'{fullname}'}) #, 'parent':f'{original.parentid}'})
-        
-        # If more than one result is returned, there will be duplicates 
-        if len(taxonLookup) > 1:
-            util.logger.info('Potential duplicates detected...')
-            # Iterate taxa with identical names to original                             
-            for tl in taxonLookup:
-                # Create local taxon instance from looked up Specify taxon data 
-                lookup = taxon.Taxon(self.collection.id)
-                lookup.fill(tl)
-                #lookup.parent.fill(self.sp.getSpecifyObject(self.sptype, lookup.parentId))
-                lookup.getParent(self.sp)
+        try:
+            print('.', end='')  # Handling taxon 
+            specifyTaxonId = specifyTaxon['id']
+            print(f'[{specifyTaxonId}]', end='')  # Handling taxon 
+            # Create local taxon instance from original Specify taxon data 
+            original = taxon.Taxon(self.collection.id)
+            original.fill(specifyTaxon)
+            #original.parent.fill(self.sp.getSpecifyObject(self.sptype, original.parentId))
+            original.getParent(self.sp)
+            fullname = original.fullname#.replace(' ','%20')
+            rankId = original.rank
 
-                # If the looked up taxon isn't the same record (as per 'id') then treat as potential duplicate 
-                # NOTE We need to compare the Specify id ('id') and not the local id, which is always 0 until saved
-                if lookup.id != original.id:
-                    
-                    # If the parents match then treat as duplicate 
-                    if lookup.parent_id == original.parent_id:
-                        self.handleDuplicate(original, lookup)
-                    #elif lookup.y:
-                    #    print('hey')
-                    else:
-                        # Found taxa with matching names, but different parents: Add to ambivalent cases 
-                        ambivalence = f'Ambivalence on parent taxa: {original.parent.fullname} [{original.parent.id}] vs {lookup.parent.fullname} [{lookup.parent.id}] '
-                        util.logger.info(ambivalence)
-                        original.remarks = str(original.remarks) + f' | {ambivalence}'
-                        original.duplicateid = lookup.id
-                        self.ambivalentCases.append(original)
-                        lookup.remarks = str(lookup.remarks) + f' | {ambivalence}'
-                        lookup.duplicateid = original.id
-                        self.ambivalentCases.append(lookup)
-                        print('¿', end='')
+            util.logger.info(f'Handling taxon {fullname} [{specifyTaxonId}] of rank {rankId}')
+            
+            # Look up taxa with matching fullname & rank
+            taxonLookup = self.sp.getSpecifyObjects('taxon', 100000, 0, 
+                {'definition':str(self.collection.discipline.taxontreedefid), 'rankid':f'{rankId}', 'fullname':f'{fullname}'}) #, 'parent':f'{original.parentid}'})
+            
+            # If more than one result is returned, there will be duplicates 
+            if len(taxonLookup) > 1:
+                util.logger.info('Potential duplicates detected...')
+                # Iterate taxa with identical names to original                             
+                for tl in taxonLookup:
+                    # Create local taxon instance from looked up Specify taxon data 
+                    lookup = taxon.Taxon(self.collection.id)
+                    lookup.fill(tl)
+                    #lookup.parent.fill(self.sp.getSpecifyObject(self.sptype, lookup.parentId))
+                    lookup.getParent(self.sp)
 
-                        # Attempt to resolve parentage and move duplicate taxon to certified parent
-                        self.resolveParentTaxon(original)
-                        self.resolveParentTaxon(lookup) 
+                    # If the looked up taxon isn't the same record (as per 'id') then treat as potential duplicate 
+                    # NOTE We need to compare the Specify id ('id') and not the local id, which is always 0 until saved
+                    if lookup.id != original.id:
+                        
+                        # If the parents match then treat as duplicate 
+                        if lookup.parent_id == original.parent_id:
+                            self.handleDuplicate(original, lookup)
+                        else:
+                            # Found taxa with matching names, but different parents: Add to ambivalent cases 
+                            ambivalence = f'Ambivalence on parent taxa: {original.parent.fullname} [{original.parent.id}] vs {lookup.parent.fullname} [{lookup.parent.id}] '
+                            util.logger.info(ambivalence)
+                            original.remarks = str(original.remarks) + f' | {ambivalence}'
+                            original.duplicateid = lookup.id
+                            self.ambivalentCases.append(original)
+                            lookup.remarks = str(lookup.remarks) + f' | {ambivalence}'
+                            lookup.duplicateid = original.id
+                            self.ambivalentCases.append(lookup)
+                            print('¿', end='')
 
-        else:
-            util.logger.info(f'Duplicate {fullname} no longer found! (Original taxon Specify id: {original.id})')
-            print('x', end='') # Duplicate no longer found 
+                            # Attempt to resolve parentage and move duplicate taxon to certified parent
+                            criterium1 = self.resolveParentTaxon(original)
+                            criterium2 = self.resolveParentTaxon(lookup) 
+
+                            if criterium1 and criterium2:
+                                # If both taxa have been moved, then treat as duplicate 
+                                self.handleDuplicate(original, lookup)
+            else:
+                util.logger.info(f'Duplicate {fullname} no longer found! (Original taxon Specify id: {original.id})')
+                print('x', end='') # Duplicate no longer found 
+        except Exception as e:
+            # Handle any exceptions that occur during the process  
+            util.logger.error(f'Error handling taxon "{specifyTaxon['fullname']}"...')
+            util.logger.error(e)
+            print('@', end='') # output token to indicate error  
     
     def handleDuplicate(self, original, lookup):
         """
@@ -202,6 +259,9 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         # If both original and lookup contain author data and the author is not identical, 
         #   retrieve authorship from GBIF 
         unResolved = self.resolveAuthorNames(original, lookup)
+
+        if unResolved and (original.author is None and lookup.author is None):
+            pass
 
         if unResolved:
         # If authorship could not be resolved, add to ambivalent cases 
@@ -274,6 +334,11 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                 criterium1 = self.resolveAuthorName(original)
                 criterium2 = self.resolveAuthorName(lookup)
                 unResolved = criterium1 and criterium2
+
+                # TODO Forcing through merge if both author names are empty
+                if unResolved:
+                    print('¤', end='')
+                    unResolved = False
             else:
                 util.logger.info('Original and lookup have no author data or the author is identical. ')
                 unResolved = False  
@@ -289,9 +354,14 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         """
         util.logger.info('Resolving author name...')
         acceptedNameMatches = self.gbif.matchName('species', taxonInstance.fullname, self.collection.id, 'Plantae')
-        
         nrOfMatches = len(acceptedNameMatches)
-        if nrOfMatches == 1:
+        
+        # Check whether any multiple GBIF name matches are identical to each other
+        if nrOfMatches > 1:
+            sameAcceptedName = self.checkNameMatches(taxonInstance, acceptedNameMatches)
+        else: sameAcceptedName = False # To make sure the boolean is initalized 
+
+        if nrOfMatches == 1 or sameAcceptedName:
             util.logger.info('Retrieved unambiguous accepted name from GBIF...')
             # Update the authorname at Specify 
             res = self.updateSpecifyTaxonAuthor(taxonInstance, acceptedNameMatches[0]['authorship'])
@@ -303,6 +373,25 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             util.logger.info(f'Could not retrieve unambiguous accepted name from GBIF... ({nrOfMatches} matches)')
             unResolved = True
         return unResolved
+    
+    def checkNameMatches(self, taxonInstance, acceptedNameMatches):
+        """
+        Method for checking whether multiple GBIF name matches are identical to each other
+        CONTRACT 
+            taxonInstance (taxon.Taxon) : Taxon class instance for which the author should be resolved
+            acceptedNameMatches (list) : List of GBIF name matches        
+        """
+        
+        same_AcceptedName = False
+        last_nub_key = acceptedNameMatches[0]['nubKey']
+        for match in acceptedNameMatches:
+            # Check if the author name in the match is identical to the taxon instance's author name
+            if match['nubKey'] == last_nub_key:
+                same_AcceptedName = True
+            else:
+                same_AcceptedName = False 
+
+        return same_AcceptedName
 
     def resolveParentTaxon(self, taxonInstance):
         """
@@ -426,6 +515,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
 
     def printLegend(self):
         print('LEGEND:')
+        print('.      = Handling taxon ')
         print('<rank> = Taxon rank id (Genus:180, Species:220, Subspecies:230)')
         print('[id]   = Single taxon entry (id = primary key)')
         print('!      = Possible duplicate ')
@@ -433,6 +523,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         print('?      = Ambivalence on authors ')
         print('¿      = Ambivalence on parent taxa ')
         print('x      = Duplicates not found ')
+        print('¤      = Author names missing: Force merge ')
         print('*      = Ambiguity resolved for merge/move ')
         print('|s->t| = Merge/move request (s = taxon id, t = target id)')
         print('|s=>t| = Merge/move request (s = taxon id, t = target parent id)')
