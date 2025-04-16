@@ -71,8 +71,11 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         if filename: self.checkPrecollectedTaxa(filename)
         
         print('Proceeding with general scan...')
-        self.scan()
+        #self.scan()
         print('Scan complete!')
+        
+        self.SaveAmbivalentCases()
+        
         print('----------------------------------')
 
     def checkPrecollectedTaxa(self, filename):
@@ -158,17 +161,31 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
 
                     # Prepare for fetching next batch, by increasing offset with batchsize 
                     offset += self.batchSize
-        
+
+    def SaveAmbivalentCases(self):
+        """
+        Function for saving ambivalent cases to file 
+        """
         # Handle Ambivalent cases: Save & export to file 
         util.logger.info('Handle ambivalent cases...')
         print('Saving ambivalent cases to file...')
-        for case in self.ambivalentCases: 
-            util.logger.info(f' - {case}')
-            # Save case to text file
-            with open(f'output/merge_ambivalent_cases_{datetime.datetime.now()}.txt', 'a') as f:
-                f.write(f'{case}\n')
 
-        #util.logger.info(self.dx.exportTable('taxon', 'xlsx'))
+        f = open(f'output/merge_ambivalent_cases_{datetime.datetime.now().strftime("%Y%m%d%H%M")}.csv', 'a', encoding='utf-8') 
+
+        if self.ambivalentCases:
+            f.write(self.ambivalentCases[0].get_headers() + '\n')
+            seen_cases = set()
+            for case in self.ambivalentCases: 
+                util.logger.info(f' - Ambivalent case: {case}')
+                if str(case) not in seen_cases:
+                    seen_cases.add(str(case))
+                    util.logger.info('   * Writing ambivalent case to file')
+                    f.write(f'{case}\n')
+                else:
+                    util.logger.info(f'   * Duplicate case: {case} already seen...')
+        else:
+            util.logger.info('No ambivalent cases found...')
+            print('No ambivalent cases found...')
 
     def handleSpecifyTaxon(self, specifyTaxon):
         """
@@ -180,7 +197,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         """
 
         try:
-            print('>', end='')  # Handling taxon 
+            print('◘', end='')  # Handling taxon 
             specifyTaxonId = specifyTaxon['id']
             print(f'[{specifyTaxonId}]', end='')  # Handling taxon 
             # Create local taxon instance from original Specify taxon data 
@@ -197,6 +214,9 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             taxonLookup = self.sp.getSpecifyObjects('taxon', 100000, 0, 
                 {'definition':str(self.collection.discipline.taxontreedefid), 'rankid':f'{rankId}', 'fullname':f'{fullname}'}) #, 'parent':f'{original.parentid}'})
             
+            if original.fullname == 'Draba incana':
+                pass
+
             # If more than one result is returned, there will be duplicates 
             if len(taxonLookup) > 1:
                 util.logger.info('Potential duplicates detected...')
@@ -520,7 +540,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
 
     def printLegend(self):
         print('LEGEND:')
-        print('>      = Handling taxon ')
+        print('◘      = Handling taxon ')
         print('<rank> = Taxon rank id (Genus:180, Species:220, Subspecies:230)')
         print('[id]   = Single taxon entry (id = primary key)')
         print('!      = Possible duplicate ')

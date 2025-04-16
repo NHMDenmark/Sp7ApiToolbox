@@ -112,6 +112,12 @@ class Taxon(TreeNode):
             util.logLine("ERROR: Failed to retrieve parent taxon.",'error')
             
         return self.parent 
+    
+    def get_headers(self):
+        return f'"{self.sptype}id", "name", "fullname", "author"'        
+
+    def __str__(self):
+        return f'{self.id},"{self.name}","{self.fullname}","{self.author}"'
 
 """
 
