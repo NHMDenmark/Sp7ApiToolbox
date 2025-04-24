@@ -37,6 +37,7 @@ class TreeNode:
         self.fullname = fullname
         self.parent_id = parent_id
         self.parent = None
+        self.children = []
         self.definitionitem_id = treedefitemid
         self.treedef_id = treedefid
         self.rank = rank_id

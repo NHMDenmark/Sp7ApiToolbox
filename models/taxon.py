@@ -113,6 +113,35 @@ class Taxon(TreeNode):
             
         return self.parent 
     
+    def getChildCount(self, specify_interface):
+        """ 
+        Get the number of children for this taxon. If the children have not been retrieved yet, it will fetch them from the API.
+        """
+        if len(self.children) > 0:
+            return len(self.children)
+        
+        self.getChildren(specify_interface)
+            
+        return len(self.children)
+      
+    def getChildren(self, specify_interface):
+        """ 
+        
+
+        """
+        
+        try:
+            childTaxonObj = specify_interface.getSpecifyObjects(self.sptype,limit=1000, offset=0, 
+                                                                filters={'parent': f'/api/specify/{self.sptype}/{self.id}/'})
+            for childObj in childTaxonObj:
+                childTaxon = Taxon()
+                childTaxon.fill(childObj)
+                self.children.append(childTaxon)
+        except:
+            util.logLine("ERROR: Failed to retrieve parent taxon.",'error')
+            
+        return self.children
+    
     def get_headers(self):
         return f'"{self.sptype}id", "name", "fullname", "author"'        
 

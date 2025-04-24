@@ -70,8 +70,10 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         filename = args.get('filename')
         if filename: self.checkPrecollectedTaxa(filename)
         
-        print('Proceeding with general scan...')
-        #self.scan()
+        print()
+        print('(Proceeding with general scan)')
+
+        self.scan()
         print('Scan complete!')
         
         self.SaveAmbivalentCases()
@@ -92,26 +94,27 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             
             idList = open(f'data/{filename}', 'r')
             taxonIds = idList.readlines()  
+
+            if len(taxonIds) > 0:
+                print(f'Checking {len(taxonIds)} pre-collected taxa...')
+                for taxonId in taxonIds: 
+                    taxonId = int(taxonId)
+                    #print(f'Fetching taxon with id: {taxonId}')
+                    specifyTaxon = self.sp.getSpecifyObject('taxon', int(taxonId))
+                    if specifyTaxon:
+                        # If 
+                        self.handleSpecifyTaxon(specifyTaxon)
+                    else:
+                        print('#', end='') #[Could not retrieve taxon]   
+            else:
+                print('No taxon ids found in the file...')
+                util.logger.info('No taxon ids found in the file...')
+                
         except Exception as e:
             # Handle any exceptions that occur during the process  
             util.logger.error(f'Error opening file "{filename}"...')
             util.logger.error(e)
             print(f'An error occurred while processing the file with precollected taxon ids... ({filename})')
-
-        if len(taxonIds) > 0:
-            print(f'Checking {len(taxonIds)} pre-collected taxa...')
-            for taxonId in taxonIds: 
-                taxonId = int(taxonId)
-                #print(f'Fetching taxon with id: {taxonId}')
-                specifyTaxon = self.sp.getSpecifyObject('taxon', int(taxonId))
-                if specifyTaxon:
-                    # If 
-                    self.handleSpecifyTaxon(specifyTaxon)
-                else:
-                    print('#', end='') #[Could not retrieve taxon]   
-        else:
-            print('No taxon ids found in the file...')
-            util.logger.info('No taxon ids found in the file...')
 
     def scan(self):
         """
@@ -134,7 +137,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             print(f'<{rankId}>', end='')  # Handling taxon
 
             # Only look at ranks below genera 
-            if rankId > 180:
+            if rankId >= 180:
                 offset = 0
                 resultCount = -1
                 while resultCount != 0:
@@ -279,6 +282,24 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         # If original author is empty, but lookup author isn't, then weight lookup higher
         if original.author == None and lookup.author is not None: 
             duplicateWeight += 1
+        else:
+            originalWeight += 1
+        
+        # Weight according to ID number (lower is better)
+        if original.id < lookup.id:
+            originalWeight += 1
+        else:
+            duplicateWeight += 1
+
+        # Weight according to number of children (higher is better)
+        original_childcount = original.getChildCount(self.sp)
+        lookup_childcount = lookup.getChildCount(self.sp)
+        if original_childcount > lookup_childcount:
+            originalWeight += 1
+        else:
+            if original_childcount != lookup_childcount:
+                duplicateWeight += 1
+        
         # TODO more weighting rules ? 
         
         # If both original and lookup contain author data and the author is not identical, 
@@ -286,7 +307,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         unResolved = self.resolveAuthorNames(original, lookup)
 
         if unResolved and (original.author is None and lookup.author is None):
-            pass
+            pass # ??? 
 
         if unResolved:
         # If authorship could not be resolved, add to ambivalent cases 
