@@ -24,7 +24,9 @@ class Taxon(TreeNode):
     Class encapsulating storage tree node relevant methods 
     """
 
-    def __init__(self, id=None, name=None, fullname=None, taxon_author=None, parent_id=None, rank_id=None, treedefitemid=None, treedefid=None, is_accepted = True, accepted_taxon_id = None, is_hybrid = False) -> None:
+    def __init__(self, id=None, name=None, fullname=None, taxon_author=None, parent_id=None, rank_id=None, 
+                 treedefitemid=None, treedefid=None, is_accepted = True, accepted_taxon_id = None, is_hybrid = False,
+                 taxon_key=None, taxon_key_source=None) -> None:
         """
         Constructor
         CONTRACT 
@@ -46,6 +48,11 @@ class Taxon(TreeNode):
         self.accepted_taxon_id = accepted_taxon_id
         self.is_hybrid = is_hybrid
 
+        self.taxon_key = taxon_key  # This is the taxon key in Specify, not the primary key
+        self.taxon_key_source = taxon_key_source  # This is the source of the taxon key, e.g., 'GBIF', 'Wikidata', etc.
+
+        self.version = 0
+
     def createJsonString(self) -> str:
         """
         Creates JSON representation of the object for posting or putting to the API.
@@ -61,7 +68,11 @@ class Taxon(TreeNode):
             'definitionitem': f'/api/specify/{self.sptype}treedefitem/{self.definitionitem_id}/',
             'author': self.author,
             'isaccepted': bool(self.is_accepted),
-            'ishybrid': bool(self.is_hybrid)
+            'acceptedtaxon': f'/api/specify/{self.sptype}/{self.accepted_taxon_id}/' if not self.is_accepted else None, 
+            'ishybrid': bool(self.is_hybrid),
+            'text1' : self.taxon_key,  # Assuming text1 is used for the taxon key
+            'text2' : self.taxon_key_source,  # Assuming text2 is used for the taxon key source
+            'version': self.version
         }
 
         # Conditionally add acceptedtaxon key
@@ -90,8 +101,10 @@ class Taxon(TreeNode):
         self.author = jsonObject['author']
         if jsonObject['parent']:
             self.parent_id = jsonObject['parent'].split('/')[4]
-        self.definitionitem_id = jsonObject['definition'].split('/')[4]
-        self.treedef_id = jsonObject['definitionitem'].split('/')[4] 
+        else:
+            pass
+        self.definitionitem_id = jsonObject['definitionitem'].split('/')[4]
+        self.treedef_id = jsonObject['definition'].split('/')[4] 
         self.rank = jsonObject['rankid']
 
         self.is_accepted = bool(jsonObject['isaccepted'])
@@ -101,7 +114,9 @@ class Taxon(TreeNode):
         self.is_hybdrid = bool(jsonObject['ishybrid'])
         self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
         self.sptype = jsonObject['resource_uri'].split('/')[3] 
-      
+
+        self.version = jsonObject['version']
+
     def getParent(self, specify_interface):
         """ """
         self.parent = Taxon()
@@ -132,7 +147,7 @@ class Taxon(TreeNode):
         
         try:
             childTaxonObj = specify_interface.getSpecifyObjects(self.sptype,limit=1000, offset=0, 
-                                                                filters={'parent': f'/api/specify/{self.sptype}/{self.id}/'})
+                                                                filters={'parent': f'{self.id}'})
             for childObj in childTaxonObj:
                 childTaxon = Taxon()
                 childTaxon.fill(childObj)
@@ -171,5 +186,9 @@ Genus= 180
 Subgenus= 190 
 Species= 220 
 Subspecies= 230 
+Variety = 240 
+Subvariety = 250
+Forma = 260 
+Subforma = 270
 
 """       

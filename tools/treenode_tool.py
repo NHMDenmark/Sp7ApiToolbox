@@ -17,6 +17,7 @@ import specify_interface
 import global_settings as app
 from models.treenode import TreeNode
 from tools.sp7api_tool import Sp7ApiTool
+import util
 
 class TreeNodeTool(Sp7ApiTool):
     """
@@ -74,7 +75,7 @@ class TreeNodeTool(Sp7ApiTool):
         """
         
         # Exit recursion when last column reached
-        if index >= len(headers) - 1: return None
+        if index >= len(headers): return None
 
         # Check if child node already exists
         child_name = row[headers[index]].strip()
@@ -92,7 +93,7 @@ class TreeNodeTool(Sp7ApiTool):
             child_node = self.createTreeNode(headers, row, parent_id, index)
         
         # Recursive call for the next child node
-        if index < len(headers):
+        if index < len(headers) - 1:
             if child_node:
                 last_child_node = self.addChildNodes(headers, row, child_node.id, index + 1)
             else:
@@ -195,7 +196,12 @@ class TreeNodeTool(Sp7ApiTool):
         rank_names = {item['name']: item for item in self.TreeDefItems}
         
         for header in headers:
+            if 'TaxonKey' in header:
+                # Skip TaxonKey headers as they are not part of the tree definition
+                continue
             if header not in rank_names:
+                print("Validation failed: Header '{}' is not a valid rank in the tree definition.".format(header))
+                util.logger.debug(f"Validation failed: Header '{header}' is not a valid rank in the tree definition.")
                 return False
 
         return valid
@@ -232,8 +238,8 @@ class TreeNodeTool(Sp7ApiTool):
             if item['name'] == header:
                 return item
         
-        return None
-        #raise Exception("Tree Def Item not found!")
+        #return None
+        raise Exception(f"Tree Def Item '{header}' not found!")
 
     def getRankId(self, header):
         """

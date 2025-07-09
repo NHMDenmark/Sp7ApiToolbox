@@ -252,8 +252,8 @@ class SpecifyInterface():
     if response.status_code < 299:
        return response.json()
     else: 
-      #raise Exception(f"Response error: {response.status_code}")
-      return None #response.json() 
+      util.logger.debug(f' - ERROR trying to delete object!')
+      raise Exception(f"Response error: {response.status_code}")
 
   def deleteSpecifyObject(self, objectName, objectId):
     """ 
@@ -273,8 +273,8 @@ class SpecifyInterface():
     if response.status_code < 299:
       return True
     else: 
-      #raise Exception(f"Response error: {response.status_code}")
       util.logger.debug(f' - ERROR trying to delete object!')
+      raise Exception(f"Response error: {response.status_code}")
 
     return False #response.status_code 
 
