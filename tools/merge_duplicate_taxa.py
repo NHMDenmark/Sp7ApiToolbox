@@ -114,7 +114,8 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
             # Handle any exceptions that occur during the process  
             util.logger.error(f'Error opening file "{filename}"...')
             util.logger.error(e)
-            print(f'An error occurred while processing the file with precollected taxon ids... ({filename})')
+            #print(f'An error occurred while processing the file with precollected taxon ids... ({filename})')
+            print('@', end='') # output token to indicate error 
 
     def scan(self):
         """
@@ -128,8 +129,10 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         # Fetch taxon ranks from selected collection's discipline taxon tree 
         taxonranks = self.sp.getSpecifyObjects('taxontreedefitem', 100, 0, {"treedef":str(taxontreedefid)})
 
+        taxonranks_reversed = taxonranks[::-1]  # Reverse the order of the ranks
+
         # Iterate taxon ranks for analysis
-        for rank in taxonranks:
+        for rank in taxonranks_reversed:
             # Extract rank id & display 
             rankId = int(rank['rankid'])
             rankName = str(rank['name'])
@@ -173,22 +176,30 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
         util.logger.info('Handle ambivalent cases...')
         print('Saving ambivalent cases to file...')
 
-        f = open(f'output/merge_ambivalent_cases_{datetime.datetime.now().strftime("%Y%m%d%H%M")}.csv', 'a', encoding='utf-8') 
+        try:    
+            f = open(f'output/merge_ambivalent_cases_{datetime.datetime.now().strftime("%Y%m%d%H%M")}.csv', 'a', encoding='utf-8') 
 
-        if self.ambivalentCases:
-            f.write(self.ambivalentCases[0].get_headers() + '\n')
-            seen_cases = set()
-            for case in self.ambivalentCases: 
-                util.logger.info(f' - Ambivalent case: {case}')
-                if str(case) not in seen_cases:
-                    seen_cases.add(str(case))
-                    util.logger.info('   * Writing ambivalent case to file')
-                    f.write(f'{case}\n')
-                else:
-                    util.logger.info(f'   * Duplicate case: {case} already seen...')
-        else:
-            util.logger.info('No ambivalent cases found...')
-            print('No ambivalent cases found...')
+            if self.ambivalentCases:
+                f.write(self.ambivalentCases[0].get_headers() + '\n')
+                seen_cases = set()
+                for case in self.ambivalentCases: 
+                    util.logger.info(f' - Ambivalent case: {case}')
+                    if str(case) not in seen_cases:
+                        seen_cases.add(str(case))
+                        util.logger.info('   * Writing ambivalent case to file')
+                        f.write(f'{case}\n')
+                    else:
+                        util.logger.info(f'   * Duplicate case: {case} already seen...')
+            else:
+                util.logger.info('No ambivalent cases found...')
+                print('No ambivalent cases found...')
+        except Exception as e:
+            # Handle any exceptions that occur during the process  
+            util.logger.error(f'Error writing ambivalent cases to file...')
+            util.logger.error(e)
+            print('An error occurred while writing ambivalent cases to file...')
+        finally:
+            f.close()
 
     def handleSpecifyTaxon(self, specifyTaxon):
         """
