@@ -65,6 +65,14 @@ class Sp7ApiTool:
         if not os.path.isfile(f'data/{filename}'):
             raise Exception(f"File {filename} does not exist.")
 
+        print(f"Processing file: {filename}")
+        self.handleDatafile(filename)
+
+    def handleDatafile(self, filename):
+        """
+        
+        """
+
         with open(f'data/{filename}', mode='r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file, delimiter=',') # TODO Specify delimiter for files 
             headers = csv_reader.fieldnames

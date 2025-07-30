@@ -323,7 +323,6 @@ class SpecifyInterface():
     headers = {'X-CSRFToken': self.csrfToken, 'referer': self.baseURL, } 
     apiCallString = f"{self.baseURL}api/specify_tree/{tree_name}/{source_id}/merge/"
     util.logger.debug(" - API call: %s"%apiCallString)
-    exception = False
     
     try:
       response = self.spSession.post(apiCallString, headers=headers, data={'target' : target_id }, timeout=960) 
@@ -331,7 +330,6 @@ class SpecifyInterface():
       util.logger.error(str(e))
       traceBack = traceback.format_exc()
       util.logger.error(traceBack)
-      exception = True
       util.logger.debug(f' - Response: {str(response.status_code)} {response.reason} {response.text}.')
       response = util.Struct(status_code='408')
 

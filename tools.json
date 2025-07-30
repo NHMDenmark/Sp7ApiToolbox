@@ -5,6 +5,7 @@
         {"name" :"Collapse Storage Nodes", "class" : "CollapseStorageNodesTool", "module": "tools.collapse_storage_nodes"},    
         {"name" :"Merge duplicate taxa",   "class" : "MergeDuplicateTaxaTool",   "module": "tools.merge_duplicate_taxa"},    
         {"name" :"Import Taxon Synonyms",  "class" : "ImportSynonymTool",        "module": "tools.import_synonyms"},
-        {"name":"Merge duplicate taxa",    "class":"MergeDuplicateTaxaTool",     "module": "tools.merge_duplicate_taxa"}
+        {"name":"Merge duplicate taxa",    "class" : "MergeDuplicateTaxaTool",   "module": "tools.merge_duplicate_taxa"},
+        {"name":"Merge taxon pairs",       "class" : "MergeTaxonPairsTool",      "module": "tools.merge_taxon_pairs"}
     ]
 }
