@@ -132,16 +132,19 @@ class ImportSynonymTool(TreeNodeTool):
             taxon_node = Taxon(0, name, fullname, author, parent_id, rank_id, treedefitemid, self.tree_definition)
 
             # Handle synonymy 
-            is_accepted = (row.get('isAccepted') == 'Yes')
-            if not is_accepted and rank_id > 190:
-                spec_acc = self.getOrCreateAcceptedTaxon(row, headers, index, rank_id, parent_id)
-                if spec_acc:
-                    taxon_node.is_accepted = False
-                    taxon_node.accepted_taxon_id = spec_acc['id']
-                else:
-                    print(f"Error creating accepted taxon for {name}")
-                    return None
-            
+            if row.get('isAccepted') == 'No' or row.get('isAccepted') == 'Yes':
+                is_accepted = not (row.get('isAccepted') == 'No')
+                if not is_accepted and rank_id > 190:
+                    spec_acc = self.getOrCreateAcceptedTaxon(row, headers, index, rank_id, parent_id)
+                    if spec_acc:
+                        taxon_node.is_accepted = False
+                        taxon_node.accepted_taxon_id = spec_acc['id']
+                    else:
+                        print(f"Error creating accepted taxon for {name}")
+                        return None
+            else:
+                raise ValueError(f"Invalid value for 'isAccepted': {row.get('isAccepted')} in row {row}")
+
             # Handle taxon key and source
             taxon_key = row.get(headers[index] + 'TaxonKey', '').strip()
             taxon_key_source = row.get(headers[index] + 'TaxonKeySource', '').strip()

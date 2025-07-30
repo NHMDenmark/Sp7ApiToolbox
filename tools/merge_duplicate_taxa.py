@@ -160,7 +160,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                             self.handleSpecifyTaxon(specifyTaxon)
                         except Exception as e:
                             # Handle any exceptions that occur during the process  
-                            util.logger.error(f'Error handling taxon "{specifyTaxon['fullname']}"...')
+                            util.logger.error(f'Error handling taxon "{specifyTaxon.get("fullname", "<unknown>")}"...')
                             util.logger.error(e)
                             util.logger.error(traceback.format_exc())
                             print('@', end='') # output token to indicate error 
@@ -273,7 +273,7 @@ class MergeDuplicateTaxaTool(Sp7ApiTool):
                 print('x', end='') # Duplicate no longer found 
         except Exception as e:
             # Handle any exceptions that occur during the process  
-            util.logger.error(f'Error handling taxon "{specifyTaxon['fullname']}"...')
+            util.logger.error(f'Error handling taxon "{specifyTaxon["fullname"]}"...')
             util.logger.error(e)
             print('@', end='') # output token to indicate error  
     
