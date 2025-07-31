@@ -201,8 +201,13 @@ class ImportSynonymTool(TreeNodeTool):
                 #     pass
 
                 # Add taxon key and taxon key source to the taxon node
-                taxon_node.taxon_key = row.get(headers[index] + 'TaxonKey', '').strip()
-                taxon_node.taxon_key_source = row.get(headers[index] + 'TaxonKeySource', '').strip()
+                taxon_node.taxon_key = row.get(headers[index] + 'TaxonKey', None)
+                if taxon_node.taxon_key == '': taxon_node.taxon_key = None
+                taxon_node.taxon_key_source = row.get(headers[index] + 'TaxonKeySource', None)
+                if taxon_node.taxon_key_source == '': taxon_node.taxon_key_source = None
+
+                # Ensure empty string fields are set to None
+                if taxon_node.author == '': taxon_node.author = None
 
                 # Create the taxon node in Specify7
                 jsonString = taxon_node.createJsonString()
@@ -283,8 +288,8 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()}"
             accepted_node.author = row['AcceptedSpeciesAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip()
-            accepted_node.taxon_key = row.get('AcceptedSpeciesTaxonKey', '').strip()
-            accepted_node.taxon_key_source = row.get('AcceptedSpeciesTaxonKeySource', '').strip()
+            accepted_node.taxon_key = row.get('AcceptedSpeciesTaxonKey', None)
+            accepted_node.taxon_key_source = row.get('AcceptedSpeciesTaxonKeySource', None)
             subgenus = f" {row['Subgenus'].strip()}" if row.get('Subgenus') else ''
             parent_rank_name = 'Genus' if subgenus == '' else 'Subgenus'
             grandparent_id = self.getGrandParentId(parent_id)
@@ -294,10 +299,15 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} {row['AcceptedSubspecies'].strip()}"
             accepted_node.author = row['AcceptedSubspeciesAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
-            accepted_node.taxon_key = row.get('AcceptedSubspeciesTaxonKey', '').strip()
-            accepted_node.taxon_key_source = row.get('AcceptedSubspeciesTaxonKeySource', '').strip()
+            accepted_node.taxon_key = row.get('AcceptedSubspeciesTaxonKey', None)
+            accepted_node.taxon_key_source = row.get('AcceptedSubspeciesTaxonKeySource', None)
             parent_rank_name = 'Species'
             grandparent_id = parent_id  # Subspecies parent is the species 
+        
+        # Ensure empty string fields are set to null
+        if accepted_node.author == '': accepted_node.author = None
+        if accepted_node.taxon_key == '': accepted_node.taxon_key = None
+        if accepted_node.taxon_key_source == '': accepted_node.taxon_key_source = None
 
         # Get or create the parent node using only row, parent_rank_name, and grandparent_id
         parent_node = self.getOrCreateParentNode(row, parent_rank_name, grandparent_id)
