@@ -195,21 +195,6 @@ class TreeNodeTool(Sp7ApiTool):
         # Create a dictionary with 'name' as key for quick lookup
         rank_names = {item['name']: item for item in self.TreeDefItems}
 
-        if 'Order' not in rank_names:
-            print("Validation failed: 'Order' header is missing in the tree definition.")
-            util.logger.debug("Validation failed: 'Order' header is missing in the tree definition.")
-            return False
-        
-        if 'Class' not in rank_names:
-            print("Validation failed: 'Class' header is missing in the tree definition.")
-            util.logger.debug("Validation failed: 'Class' header is missing in the tree definition.")
-            return False
-
-        if 'Kingdom' not in rank_names:
-            print("Validation failed: 'Kingdom' header is missing in the tree definition.")
-            util.logger.debug("Validation failed: 'Kingdom' header is missing in the tree definition.")
-            return False
-
         for header in headers:
             if 'TaxonKey' in header:
                 # Skip TaxonKey headers as they are not part of the tree definition

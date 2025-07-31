@@ -64,6 +64,16 @@ class ImportSynonymTool(TreeNodeTool):
 
         taxon_headers = self.extractTaxonHeaders(headers)
 
+        # Check if the higher taxonomy above family is present
+        rank_names = {item['name']: item for item in self.TreeDefItems}        
+        for rank in rank_names:
+            if rank == 'Life': continue
+            if rank == 'Family': break
+            if rank not in taxon_headers:
+                print(f"Validation failed: The header '{rank}' is missing from the file.")
+                util.logger.debug(f"Validation failed: The header '{rank}' is missing from the file.")
+                return False
+
         valid = super().validateHeaders(taxon_headers)
         
         return valid
