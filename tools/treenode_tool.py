@@ -196,8 +196,8 @@ class TreeNodeTool(Sp7ApiTool):
         rank_names = {item['name']: item for item in self.TreeDefItems}
 
         for header in headers:
-            if 'TaxonKey' in header:
-                # Skip TaxonKey headers as they are not part of the tree definition
+            if 'TaxonKey' or 'Accepted' in header:
+                # Skip TaxonKey & Accepted taxon headers as they are not part of the tree definition
                 continue
             if header not in rank_names:
                 print("Validation failed: Header '{}' is not a valid rank in the tree definition.".format(header))
