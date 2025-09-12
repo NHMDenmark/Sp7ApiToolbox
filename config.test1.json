@@ -1,7 +1,0 @@
-{
-    "mode":       "test1",
-    "domain":     "https://specify-test1.science.ku.dk/", 
-    "collection": "NHMD Vascular Plants", 
-    "username":   "sp7apitool", 
-    "password":   "sp7apitool"
-}

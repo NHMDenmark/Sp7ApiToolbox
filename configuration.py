@@ -42,7 +42,7 @@ class ConfigurationHandler():
             mode (String) : The name of the mode of operation 
         """
         if mode != "": mode = "." + mode
-        with open(f"config{mode}.json", "r") as file:
+        with open(f"config/config{mode}.json", "r") as file:
             config = json.load(file)
 
         if config:
