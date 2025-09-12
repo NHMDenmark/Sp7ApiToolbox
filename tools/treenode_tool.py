@@ -93,6 +93,7 @@ class TreeNodeTool(Sp7ApiTool):
             child_node = self.createTreeNode(headers, row, parent_id, index)
         
         # Recursive call for the next child node
+        last_child_node = None
         if index < len(headers) - 1:
             if child_node:
                 last_child_node = self.addChildNodes(headers, row, child_node.id, index + 1)

@@ -303,6 +303,46 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.taxon_key_source = row.get('AcceptedSubspeciesTaxonKeySource', None)
             parent_rank_name = 'Species'
             grandparent_id = parent_id  # Subspecies parent is the species 
+        elif acc_rank_id == 240:
+            # Variety rank accepted name
+            accepted_node.name = row['AcceptedVariety'].strip()
+            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} var. {row['AcceptedVariety'].strip()}"
+            accepted_node.author = row['AcceptedVarietyAuthor'].strip()
+            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_key = row.get('AcceptedVarietyTaxonKey', None)
+            accepted_node.taxon_key_source = row.get('AcceptedVarietyTaxonKeySource', None)
+            parent_rank_name = 'Species'
+            grandparent_id = parent_id  # Variety parent is the species
+        elif acc_rank_id == 250:
+            # Subvariety rank accepted name
+            accepted_node.name = row['AcceptedSubvariety'].strip()
+            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} subvar. {row['AcceptedSubvariety'].strip()}"
+            accepted_node.author = row['AcceptedSubvarietyAuthor'].strip()
+            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_key = row.get('AcceptedSubvarietyTaxonKey', None)
+            accepted_node.taxon_key_source = row.get('AcceptedSubvarietyTaxonKeySource', None)
+            parent_rank_name = 'Species'
+            grandparent_id = parent_id  # Subvariety parent is the species
+        elif acc_rank_id == 260:
+            # Forma rank accepted name
+            accepted_node.name = row['AcceptedForma'].strip()
+            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} forma {row['AcceptedForma'].strip()}"
+            accepted_node.author = row['AcceptedFormaAuthor'].strip()
+            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_key = row.get('AcceptedFormaTaxonKey', None)
+            accepted_node.taxon_key_source = row.get('AcceptedFormaTaxonKeySource', None)
+            parent_rank_name = 'Species'
+            grandparent_id = parent_id  # Forma parent is the species
+        elif acc_rank_id == 270:
+            # Subforma rank accepted name
+            accepted_node.name = row['AcceptedSubforma'].strip()
+            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} subforma {row['AcceptedSubforma'].strip()}"
+            accepted_node.author = row['AcceptedSubformaAuthor'].strip()
+            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_key = row.get('AcceptedSubformaTaxonKey', None)
+            accepted_node.taxon_key_source = row.get('AcceptedSubformaTaxonKeySource', None)
+            parent_rank_name = 'Species'
+            grandparent_id = parent_id  # Subforma parent is the species    
         
         # Ensure empty string fields are set to null
         if accepted_node.author == '': accepted_node.author = None
@@ -391,10 +431,22 @@ class ImportSynonymTool(TreeNodeTool):
         
         # Determine the rank of the accepted name
         acc_rank_id = rank_id
-        if row.get('AcceptedSubspecies') != '':
+        if row.get('AcceptedSubforma') != '' and row.get('AcceptedSubforma') is not None:
+            acc_rank_id = 270
+            treedefitemid = str(self.getTreeDefItem('Subforma')['treeentries']).split('=')[1]
+        elif row.get('AcceptedForma') != '' and row.get('AcceptedForma') is not None:
+            acc_rank_id = 260
+            treedefitemid = str(self.getTreeDefItem('Forma')['treeentries']).split('=')[1]
+        elif row.get('AcceptedSubvariety') != '' and row.get('AcceptedSubvariety') is not None: 
+            acc_rank_id = 250
+            treedefitemid = str(self.getTreeDefItem('Subvariety')['treeentries']).split('=')[1]
+        elif row.get('AcceptedVariety') != '' and row.get('AcceptedVariety') is not None: 
+            acc_rank_id = 240
+            treedefitemid = str(self.getTreeDefItem('Variety')['treeentries']).split('=')[1]
+        elif row.get('AcceptedSubspecies') != '' and row.get('AcceptedSubspecies') is not None:   
             acc_rank_id = 230
             treedefitemid = str(self.getTreeDefItem('Subspecies')['treeentries']).split('=')[1]
-        elif row.get('AcceptedSpecies') != '':
+        elif row.get('AcceptedSpecies') != '' and row.get('AcceptedSpecies') is not None: 
             acc_rank_id = 220
             treedefitemid = str(self.getTreeDefItem('Species')['treeentries']).split('=')[1]
         else:
@@ -402,8 +454,15 @@ class ImportSynonymTool(TreeNodeTool):
             raise Exception("No accepted name found for the taxon.")
             
         accepted_node = self.createAcceptedNode(row, acc_rank_id, treedefitemid, parent_id)
+        filters = {
+            'name': accepted_node.name,
+            'fullname': accepted_node.fullname,
+            'parent': accepted_node.parent.id
+        }
+        if accepted_node.author:
+            filters['author'] = accepted_node.author
+        check_acc = self.sp.getSpecifyObjects(self.sptype, limit=1, filters=filters)
 
-        check_acc = self.sp.getSpecifyObjects(self.sptype, limit=1, filters={'name': accepted_node.name, 'fullname': accepted_node.fullname, 'author': accepted_node.author, 'parent': accepted_node.parent.id})
         if check_acc:
             accepted_node.id = check_acc[0]['id']
             spec_acc = check_acc[0]

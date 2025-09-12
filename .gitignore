@@ -166,7 +166,6 @@ cython_debug/
 /tools/__pycache__
 output/*.*
 config/config.*.json
-sandbox.py
 data/cabinet_shelf_numbers_test.csv
 data/cabinet_shelf_numbers.csv
 data/taxonomy_file.csv
@@ -176,6 +175,5 @@ data/taxonomy_file_20250512_subspecies.csv
 data/taxonomy_file_20250512_2.csv
 data/taxonomy_file_20250512.csv
 data/NHMD HP taxon pairs.csv
-data/merge_duplicate_taxa
 data/AU_Herba_20241210_09_27_AHB_synonymsToImport.csv
 data/AU_Herba_20241210_09_27_AHB_synonymsToImport copy.csv
