@@ -234,6 +234,9 @@ class TreeNodeTool(Sp7ApiTool):
         Get the tree definition item AKA node rank for a given header by looking it up in self.TreeDefItems.
         """
 
+        # Removed "Accepted" prefix if present
+        if 'Accepted' in header: header = header.replace('Accepted', '').strip()
+
         for item in self.TreeDefItems:
             if item['name'] == header:
                 return item
