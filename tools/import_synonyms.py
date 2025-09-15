@@ -87,7 +87,7 @@ class ImportSynonymTool(TreeNodeTool):
         if index <= 0:
             return False
 
-        taxon_headers = [header for header in headers[:index] if 'Author' not in header and 'TaxonKey' not in header]
+        taxon_headers = [header for header in headers[:index] if 'Author' not in header and 'TaxonKey' not in header and 'TaxonSource' not in header] 
 
         return taxon_headers
 
@@ -155,13 +155,18 @@ class ImportSynonymTool(TreeNodeTool):
             else:
                 raise ValueError(f"Invalid value for 'isAccepted': {row.get('isAccepted')} in row {row}")
 
-            # Handle taxon key and source
+            # Handle taxon key and its source
             taxon_key = row.get(headers[index] + 'TaxonKey', '').strip()
             taxon_key_source = row.get(headers[index] + 'TaxonKeySource', '').strip()
             if taxon_key:
                 taxon_node.taxon_key = taxon_key
             if taxon_key_source:
                 taxon_node.taxon_key_source = taxon_key_source
+
+            # Handle taxon source
+            taxon_source = row.get(headers[index] + 'TaxonSource', '').strip()
+            if taxon_source:
+                taxon_node.taxon_source = taxon_source
 
             # TODO Handle hybrid taxa
             if row.get('isHybrid') == 'Yes':

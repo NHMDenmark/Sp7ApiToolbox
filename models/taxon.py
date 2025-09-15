@@ -26,7 +26,7 @@ class Taxon(TreeNode):
 
     def __init__(self, id=None, name=None, fullname=None, taxon_author=None, parent_id=None, rank_id=None, 
                  treedefitemid=None, treedefid=None, is_accepted = True, accepted_taxon_id = None, is_hybrid = False,
-                 taxon_key=None, taxon_key_source=None) -> None:
+                 taxon_key=None, taxon_key_source=None, taxon_source=None) -> None:
         """
         Constructor
         CONTRACT 
@@ -50,6 +50,7 @@ class Taxon(TreeNode):
 
         self.taxon_key = taxon_key  # This is the taxon key in Specify, not the primary key
         self.taxon_key_source = taxon_key_source  # This is the source of the taxon key, e.g., 'GBIF', 'Wikidata', etc.
+        self.taxon_source = taxon_source  # This is the source of the taxon, e.g., 'GBIF'
 
         self.version = 0
 
@@ -72,6 +73,7 @@ class Taxon(TreeNode):
             'ishybrid': bool(self.is_hybrid),
             'text1' : self.taxon_key,  # Assuming text1 is used for the taxon key
             'text2' : self.taxon_key_source,  # Assuming text2 is used for the taxon key source
+            'source' : self.taxon_source,  # Assuming source is used for the taxon source
             'version': self.version
         }
 
@@ -114,6 +116,10 @@ class Taxon(TreeNode):
         self.is_hybdrid = bool(jsonObject['ishybrid'])
         self.create_datetime = datetime.datetime.strptime(jsonObject['timestampcreated'], '%Y-%m-%dT%H:%M:%S')
         self.sptype = jsonObject['resource_uri'].split('/')[3] 
+
+        self.taxon_key = jsonObject.get('text1', None)  # Assuming text1 is used for the taxon key
+        self.taxon_key_source = jsonObject.get('text2', None)  # Assuming text2 is used for the taxon key source
+        self.taxon_source = jsonObject.get('source', None)  # 
 
         self.version = jsonObject['version']
 
