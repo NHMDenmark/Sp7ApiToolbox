@@ -57,26 +57,35 @@ class Main():
 
         print("*** Finished running tool ***")
 
-
     def selectDatafile(self):
         """
-        Allow user interaction in CLI to select the data file for use by the tool. 
+        Allow user interaction in CLI to select the data file for use by the tool, including files in subfolders.
         """
-
         self.dataFiles = ["None"]
-        self.dataFiles.extend(os.listdir("data"))
+
+        # Walk through the 'data' directory and its subdirectories
+        for root, dirs, files in os.walk("data"):
+            for file in files:
+                # Store relative path from 'data' directory
+                rel_path = os.path.relpath(os.path.join(root, file), "data")
+                self.dataFiles.append(rel_path)
 
         print("\nChoose your datafile:")
         for index, name in enumerate(self.dataFiles, start=0):
-                    print(f"{index}. {name}")
-        dataFile = int(input("\nEnter the number of the datafile you want to use: "))
+            print(f"{index}. {name}")
 
-        if 0 <= dataFile < len(self.dataFiles):
-            self.filename = self.dataFiles[dataFile]
-            print(f"\nSelected datafile: {self.filename}")
-        else:
-            print("Invalid choice. Please try again.")
+        try:
+            dataFile = int(input("\nEnter the number of the datafile you want to use: "))
+            if 0 <= dataFile < len(self.dataFiles):
+                self.filename = self.dataFiles[dataFile]
+                print(f"\nSelected datafile: {self.filename}")
+            else:
+                print("Invalid choice. Please try again.")
+                self.selectDatafile()
+        except ValueError:
+            print("Invalid input. Please enter a number.")
             self.selectDatafile()
+
 
     def selectTool(self):
         """
