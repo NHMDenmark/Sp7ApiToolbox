@@ -176,7 +176,8 @@ class ImportSynonymTool(TreeNodeTool):
             matching_taxa = self.sp.getSpecifyObjects(self.sptype, limit=1, filters={
                 'fullname': taxon_node.fullname,
                 'rankid': taxon_node.rank,
-                #'author': taxon_node.author, # Disabled, because it led to duplicates, but not in favour as it would lead to false matches, most notably homonyms distinguished only by author 
+                #'author': taxon_node.author, 
+                # NOTE Author lookup disabled, because it led to duplicates, but not in favour as it would lead to false matches, most notably homonyms distinguished only by author 
                 'parent': parent_id,
                 'definition': self.tree_definition
             })
