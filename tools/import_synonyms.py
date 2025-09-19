@@ -176,7 +176,7 @@ class ImportSynonymTool(TreeNodeTool):
             matching_taxa = self.sp.getSpecifyObjects(self.sptype, limit=1, filters={
                 'fullname': taxon_node.fullname,
                 'rankid': taxon_node.rank,
-                'author': taxon_node.author,
+                #'author': taxon_node.author, # Disabled, because it led to duplicates, but not in favour as it would lead to false matches, most notably homonyms distinguished only by author 
                 'parent': parent_id,
                 'definition': self.tree_definition
             })
@@ -286,6 +286,8 @@ class ImportSynonymTool(TreeNodeTool):
         Create the accepted node for the synonym.
         """
         accepted_node = Taxon(0, '', '', '', 0, acc_rank_id, treedefitemid, self.tree_definition)
+        
+        family_id = self.getFamilyId(row.get('Family', '').strip()) #TODO Handle any subfamily name
 
         if acc_rank_id == 220:
             # Species rank accepted name
@@ -307,7 +309,8 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.taxon_key = row.get('AcceptedSubspeciesTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSubspeciesTaxonKeySource', None)
             parent_rank_name = 'Species'
-            grandparent_id = parent_id  # Subspecies parent is the species 
+            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
+            grandparent_id = grandparent['id']  
         elif acc_rank_id == 240:
             # Variety rank accepted name
             accepted_node.name = row['AcceptedVariety'].strip()
@@ -317,7 +320,8 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.taxon_key = row.get('AcceptedVarietyTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedVarietyTaxonKeySource', None)
             parent_rank_name = 'Species'
-            grandparent_id = parent_id  # Variety parent is the species
+            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
+            grandparent_id = grandparent['id']  
         elif acc_rank_id == 250:
             # Subvariety rank accepted name
             accepted_node.name = row['AcceptedSubvariety'].strip()
@@ -327,7 +331,8 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.taxon_key = row.get('AcceptedSubvarietyTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSubvarietyTaxonKeySource', None)
             parent_rank_name = 'Species'
-            grandparent_id = parent_id  # Subvariety parent is the species
+            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
+            grandparent_id = grandparent['id']  
         elif acc_rank_id == 260:
             # Forma rank accepted name
             accepted_node.name = row['AcceptedForma'].strip()
@@ -337,7 +342,8 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.taxon_key = row.get('AcceptedFormaTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedFormaTaxonKeySource', None)
             parent_rank_name = 'Species'
-            grandparent_id = parent_id  # Forma parent is the species
+            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
+            grandparent_id = grandparent['id']  
         elif acc_rank_id == 270:
             # Subforma rank accepted name
             accepted_node.name = row['AcceptedSubforma'].strip()
@@ -347,7 +353,8 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.taxon_key = row.get('AcceptedSubformaTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSubformaTaxonKeySource', None)
             parent_rank_name = 'Species'
-            grandparent_id = parent_id  # Subforma parent is the species    
+            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
+            grandparent_id = grandparent['id']      
         
         # Ensure empty string fields are set to null
         if accepted_node.author == '': accepted_node.author = None
@@ -424,7 +431,8 @@ class ImportSynonymTool(TreeNodeTool):
             taxon_key_source=taxon_key_source
         )
 
-        acc_parent = self.sp.postSpecifyObject('taxon', acc_parent_node.createJsonString())
+        jsonString = acc_parent_node.createJsonString()
+        acc_parent = self.sp.postSpecifyObject('taxon', jsonString)
         parent_id = acc_parent['id'] if acc_parent else grandparent_id
         parent_node = self.sp.getSpecifyObject('taxon', parent_id)
         return parent_node
@@ -475,6 +483,21 @@ class ImportSynonymTool(TreeNodeTool):
             jsonString = accepted_node.createJsonString()
             spec_acc = self.sp.postSpecifyObject(self.sptype, jsonString)
         return spec_acc
+    
+    def getFamilyId(self, family_name):
+        """
+        Get the family ID for the given family name.
+        """
+        if not family_name:
+            return 0
+        family = self.sp.getSpecifyObjects('taxon', limit=1, filters={
+            'name': family_name,
+            'rankid': self.getTreeDefItem('Family')['rankid'],
+            'definition': self.tree_definition
+        })
+        if family:
+            return family[0]['id']
+        return 0
 
     def __str__(self) -> None:
         return "ImportSynonymTool"
