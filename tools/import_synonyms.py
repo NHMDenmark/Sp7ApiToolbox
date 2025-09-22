@@ -296,6 +296,7 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()}"
             accepted_node.author = row['AcceptedSpeciesAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip()
+            accepted_node.taxon_source = row.get('AcceptedSpeciesTaxonSource', None)
             accepted_node.taxon_key = row.get('AcceptedSpeciesTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSpeciesTaxonKeySource', None)
             subgenus = f" {row['Subgenus'].strip()}" if row.get('Subgenus') else ''
@@ -307,6 +308,7 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} {row['AcceptedSubspecies'].strip()}"
             accepted_node.author = row['AcceptedSubspeciesAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_source = row.get('AcceptedSubspeciesTaxonSource', None)
             accepted_node.taxon_key = row.get('AcceptedSubspeciesTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSubspeciesTaxonKeySource', None)
             parent_rank_name = 'Species'
@@ -318,6 +320,7 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} var. {row['AcceptedVariety'].strip()}"
             accepted_node.author = row['AcceptedVarietyAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_source = row.get('AcceptedVarietyTaxonSource', None)
             accepted_node.taxon_key = row.get('AcceptedVarietyTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedVarietyTaxonKeySource', None)
             parent_rank_name = 'Species'
@@ -329,6 +332,7 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} subvar. {row['AcceptedSubvariety'].strip()}"
             accepted_node.author = row['AcceptedSubvarietyAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_source = row.get('AcceptedSubvarietyTaxonSource', None)
             accepted_node.taxon_key = row.get('AcceptedSubvarietyTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSubvarietyTaxonKeySource', None)
             parent_rank_name = 'Species'
@@ -340,6 +344,7 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} forma {row['AcceptedForma'].strip()}"
             accepted_node.author = row['AcceptedFormaAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_source = row.get('AcceptedFormaTaxonSource', None)
             accepted_node.taxon_key = row.get('AcceptedFormaTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedFormaTaxonKeySource', None)
             parent_rank_name = 'Species'
@@ -351,6 +356,7 @@ class ImportSynonymTool(TreeNodeTool):
             accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} subforma {row['AcceptedSubforma'].strip()}"
             accepted_node.author = row['AcceptedSubformaAuthor'].strip()
             accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
+            accepted_node.taxon_source = row.get('AcceptedSubformaTaxonSource', None)
             accepted_node.taxon_key = row.get('AcceptedSubformaTaxonKey', None)
             accepted_node.taxon_key_source = row.get('AcceptedSubformaTaxonKeySource', None)
             parent_rank_name = 'Species'
@@ -359,6 +365,7 @@ class ImportSynonymTool(TreeNodeTool):
         
         # Ensure empty string fields are set to null
         if accepted_node.author == '': accepted_node.author = None
+        if accepted_node.taxon_source == '': accepted_node.taxon_source = None
         if accepted_node.taxon_key == '': accepted_node.taxon_key = None
         if accepted_node.taxon_key_source == '': accepted_node.taxon_key_source = None
 
