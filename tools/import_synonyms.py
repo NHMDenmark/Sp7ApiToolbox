@@ -287,89 +287,100 @@ class ImportSynonymTool(TreeNodeTool):
         Create the accepted node for the synonym.
         """
         accepted_node = Taxon(0, '', '', '', 0, acc_rank_id, treedefitemid, self.tree_definition)
-        
-        family_id = self.getFamilyId(row.get('Family', '').strip()) #TODO Handle any subfamily name
 
-        if acc_rank_id == 220:
-            # Species rank accepted name
-            accepted_node.name = row['AcceptedSpecies'].strip()
-            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()}"
-            accepted_node.author = row['AcceptedSpeciesAuthor'].strip()
-            accepted_node.parent = row['AcceptedGenus'].strip()
-            accepted_node.taxon_source = row.get('AcceptedSpeciesTaxonSource', None)
-            accepted_node.taxon_key = row.get('AcceptedSpeciesTaxonKey', None)
-            accepted_node.taxon_key_source = row.get('AcceptedSpeciesTaxonKeySource', None)
-            subgenus = f" {row['Subgenus'].strip()}" if row.get('Subgenus') else ''
-            parent_rank_name = 'Genus' if subgenus == '' else 'Subgenus'
+        # Map rank IDs to their base taxon name and fullname format
+        rank_info = {
+            220: {
+                'base_name': 'AcceptedSpecies',
+                'fullname_format': "{genus} {species}",
+                'parent_rank_name': 'Genus',
+                'subgenus': True,
+            },
+            230: {
+                'base_name': 'AcceptedSubspecies',
+                'fullname_format': "{genus} {species} {subspecies}",
+                'parent_rank_name': 'Species',
+                'subgenus': False,
+            },
+            240: {
+                'base_name': 'AcceptedVariety',
+                'fullname_format': "{genus} {species} var. {variety}",
+                'parent_rank_name': 'Species',
+                'subgenus': False,
+            },
+            250: {
+                'base_name': 'AcceptedSubvariety',
+                'fullname_format': "{genus} {species} subvar. {subvariety}",
+                'parent_rank_name': 'Species',
+                'subgenus': False,
+            },
+            260: {
+                'base_name': 'AcceptedForma',
+                'fullname_format': "{genus} {species} forma {forma}",
+                'parent_rank_name': 'Species',
+                'subgenus': False,
+            },
+            270: {
+                'base_name': 'AcceptedSubforma',
+                'fullname_format': "{genus} {species} subforma {subforma}",
+                'parent_rank_name': 'Species',
+                'subgenus': False,
+            },
+        }
+
+        info = rank_info.get(acc_rank_id)
+        if not info:
+            raise ValueError(f"Unsupported rank ID: {acc_rank_id}")
+
+        base_name = info['base_name']
+        genus = row['AcceptedGenus'].strip()
+        species = row['AcceptedSpecies'].strip()
+
+        # Construct field names dynamically
+        taxon_name = row[base_name].strip()
+        author_field = f"{base_name}Author"
+        taxon_source_field = f"{base_name}TaxonSource"
+        taxon_key_field = f"{base_name}TaxonKey"
+        taxon_key_source_field = f"{base_name}TaxonKeySource"
+
+        # Construct fullname
+        fullname = info['fullname_format'].format(
+            genus=genus,
+            species=species,
+            subspecies=row['AcceptedSubspecies'].strip() if acc_rank_id == 230 else '',
+            variety=row['AcceptedVariety'].strip() if acc_rank_id == 240 else '',
+            subvariety=row['AcceptedSubvariety'].strip() if acc_rank_id == 250 else '',
+            forma=row['AcceptedForma'].strip() if acc_rank_id == 260 else '',
+            subforma=row['AcceptedSubforma'].strip() if acc_rank_id == 270 else '',
+        )
+
+        # Set accepted_node attributes
+        accepted_node.name = taxon_name
+        accepted_node.fullname = fullname
+        accepted_node.author = row[author_field].strip()
+        accepted_node.parent = f"{genus} {species}" if info['parent_rank_name'] == 'Species' else genus
+        accepted_node.taxon_source = row.get(taxon_source_field, None)
+        accepted_node.taxon_key = row.get(taxon_key_field, None)
+        accepted_node.taxon_key_source = row.get(taxon_key_source_field, None)
+
+        # Handle subgenus if needed
+        subgenus = f" {row['Subgenus'].strip()}" if info.get('subgenus') and row.get('Subgenus') else ''
+        parent_rank_name = 'Subgenus' if subgenus else 'Genus'
+
+        # Get family_id and grandparent_id
+        family_id = self.getFamilyId(row.get('Family', '').strip())
+        if info['parent_rank_name'] == 'Species':
+            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
+            grandparent_id = grandparent['id']
+        else:
             grandparent_id = self.getGrandParentId(parent_id)
-        elif acc_rank_id == 230:
-            # Subspecies rank accepted name
-            accepted_node.name = row['AcceptedSubspecies'].strip()
-            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} {row['AcceptedSubspecies'].strip()}"
-            accepted_node.author = row['AcceptedSubspeciesAuthor'].strip()
-            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
-            accepted_node.taxon_source = row.get('AcceptedSubspeciesTaxonSource', None)
-            accepted_node.taxon_key = row.get('AcceptedSubspeciesTaxonKey', None)
-            accepted_node.taxon_key_source = row.get('AcceptedSubspeciesTaxonKeySource', None)
-            parent_rank_name = 'Species'
-            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
-            grandparent_id = grandparent['id']  
-        elif acc_rank_id == 240:
-            # Variety rank accepted name
-            accepted_node.name = row['AcceptedVariety'].strip()
-            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} var. {row['AcceptedVariety'].strip()}"
-            accepted_node.author = row['AcceptedVarietyAuthor'].strip()
-            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
-            accepted_node.taxon_source = row.get('AcceptedVarietyTaxonSource', None)
-            accepted_node.taxon_key = row.get('AcceptedVarietyTaxonKey', None)
-            accepted_node.taxon_key_source = row.get('AcceptedVarietyTaxonKeySource', None)
-            parent_rank_name = 'Species'
-            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
-            grandparent_id = grandparent['id']  
-        elif acc_rank_id == 250:
-            # Subvariety rank accepted name
-            accepted_node.name = row['AcceptedSubvariety'].strip()
-            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} subvar. {row['AcceptedSubvariety'].strip()}"
-            accepted_node.author = row['AcceptedSubvarietyAuthor'].strip()
-            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
-            accepted_node.taxon_source = row.get('AcceptedSubvarietyTaxonSource', None)
-            accepted_node.taxon_key = row.get('AcceptedSubvarietyTaxonKey', None)
-            accepted_node.taxon_key_source = row.get('AcceptedSubvarietyTaxonKeySource', None)
-            parent_rank_name = 'Species'
-            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
-            grandparent_id = grandparent['id']  
-        elif acc_rank_id == 260:
-            # Forma rank accepted name
-            accepted_node.name = row['AcceptedForma'].strip()
-            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} forma {row['AcceptedForma'].strip()}"
-            accepted_node.author = row['AcceptedFormaAuthor'].strip()
-            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
-            accepted_node.taxon_source = row.get('AcceptedFormaTaxonSource', None)
-            accepted_node.taxon_key = row.get('AcceptedFormaTaxonKey', None)
-            accepted_node.taxon_key_source = row.get('AcceptedFormaTaxonKeySource', None)
-            parent_rank_name = 'Species'
-            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
-            grandparent_id = grandparent['id']  
-        elif acc_rank_id == 270:
-            # Subforma rank accepted name
-            accepted_node.name = row['AcceptedSubforma'].strip()
-            accepted_node.fullname = f"{row['AcceptedGenus'].strip()} {row['AcceptedSpecies'].strip()} subforma {row['AcceptedSubforma'].strip()}"
-            accepted_node.author = row['AcceptedSubformaAuthor'].strip()
-            accepted_node.parent = row['AcceptedGenus'].strip() + ' ' + row['AcceptedSpecies'].strip()
-            accepted_node.taxon_source = row.get('AcceptedSubformaTaxonSource', None)
-            accepted_node.taxon_key = row.get('AcceptedSubformaTaxonKey', None)
-            accepted_node.taxon_key_source = row.get('AcceptedSubformaTaxonKeySource', None)
-            parent_rank_name = 'Species'
-            grandparent = self.getOrCreateParentNode(row, 'Genus', family_id)
-            grandparent_id = grandparent['id']      
-        
-        # Ensure empty string fields are set to null
-        if accepted_node.author == '': accepted_node.author = None
-        if accepted_node.taxon_source == '': accepted_node.taxon_source = None
-        if accepted_node.taxon_key == '': accepted_node.taxon_key = None
-        if accepted_node.taxon_key_source == '': accepted_node.taxon_key_source = None
 
-        # Get or create the parent node using only row, parent_rank_name, and grandparent_id
+        # Ensure empty string fields are set to null
+        for field in ['author', 'taxon_source', 'taxon_key', 'taxon_key_source']:
+            if getattr(accepted_node, field) == '':
+                setattr(accepted_node, field, None)
+
+        # Get or create the parent node
         parent_node = self.getOrCreateParentNode(row, parent_rank_name, grandparent_id)
         if parent_node:
             accepted_node.parent_id = parent_node['id']
