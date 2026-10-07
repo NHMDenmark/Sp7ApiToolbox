@@ -167,3 +167,4 @@ cython_debug/
 output/*.*
 config/config.*.json
 data/test/*
+*.bak
