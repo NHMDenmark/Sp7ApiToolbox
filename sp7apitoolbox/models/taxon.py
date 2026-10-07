@@ -16,8 +16,8 @@
 import datetime
 
 # Internal Dependencies 
-import util
-from models.treenode import TreeNode
+from .. import util
+from ..models.treenode import TreeNode
 
 class Taxon(TreeNode):
     """

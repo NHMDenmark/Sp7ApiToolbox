@@ -17,15 +17,15 @@ import time
 import traceback
 import datetime
 
-from tools.sp7api_tool import Sp7ApiTool
+from .sp7api_tool import Sp7ApiTool
 
-import util
-import GBIF_interface
-import global_settings as app
+from .. import util
+from .. import GBIF_interface
+from .. import global_settings as app
 
-from models import taxon
-from models import collection as col
-from models import discipline as dsc
+from ..models import taxon
+from ..models import collection as col
+from ..models import discipline as dsc
 
 class MergeDuplicateTaxaTool(Sp7ApiTool):
     """

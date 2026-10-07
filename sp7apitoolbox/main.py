@@ -14,11 +14,11 @@
 
 import os
 import sys
-import util
+from . import util
 
 #Internal Dependencies
-import global_settings as app
-import configuration
+from . import global_settings as app
+from . import configuration
 
 class Main():
     """

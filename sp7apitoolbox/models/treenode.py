@@ -13,7 +13,7 @@
 """
 
 import datetime
-import util
+from .. import util
 
 class TreeNode:
     """

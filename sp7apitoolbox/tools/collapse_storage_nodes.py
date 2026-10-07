@@ -12,7 +12,7 @@
   PURPOSE: Tool for merging storage nodes upwards towards their nearest parent 
 """
 
-from tools.sp7api_tool import Sp7ApiTool
+from .sp7api_tool import Sp7ApiTool
 
 class CollapseStorageNodesTool(Sp7ApiTool):
     """

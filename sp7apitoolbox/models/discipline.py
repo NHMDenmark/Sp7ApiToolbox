@@ -13,7 +13,7 @@
 """
 
 # Internal dependencies
-from models import model
+from ..models import model
 
 class Discipline(model.Model):
     """

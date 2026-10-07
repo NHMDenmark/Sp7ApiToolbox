@@ -15,10 +15,12 @@
 
 import json
 import importlib
+from pathlib import Path
+from turtle import mode
 
 #Internal Dependencies
-import specify_interface
-import global_settings as app
+from . import specify_interface
+from . import global_settings as app
 
 class ConfigurationHandler():
     """
@@ -42,7 +44,10 @@ class ConfigurationHandler():
             mode (String) : The name of the mode of operation 
         """
         if mode != "": mode = "." + mode
-        with open(f"config/config{mode}.json", "r") as file:
+
+        config_file = (Path(__file__).parent / "config" / f"config{mode}.json")
+
+        with open(config_file, "r") as file:
             config = json.load(file)
 
         if config:
@@ -73,14 +78,16 @@ class ConfigurationHandler():
         The tools json must specify the name, class and module of the tool. 
         """
 
-        with open("tools.json", "r") as file:
+        tools_file = (Path(__file__).parent / "tools.json")
+
+        with open(tools_file, "r") as file:
             config = json.load(file)
 
         tools = config.get("tools", [])
 
         if tools:
             for tool in tools:
-                module = importlib.import_module(tool["module"])
+                module = importlib.import_module(f"sp7apitoolbox.{tool['module']}")
                 class_ = getattr(module, tool["class"])
                 instance = class_(self.sp)
                 self.toolKit.append((tool["name"], instance))

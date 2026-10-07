@@ -13,7 +13,7 @@
 """
 
 settings = {
-    'baseURL': '',
+    'baseURL': 'https://specify-test2.science.ku.dk/specify/',
     'database': {
         'name': 'db',
         'in_memory': False

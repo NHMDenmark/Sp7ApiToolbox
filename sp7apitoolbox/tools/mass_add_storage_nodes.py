@@ -23,8 +23,8 @@
 """
 
 # Internal Dependencies 
-from tools.treenode_tool import TreeNodeTool
-import specify_interface
+from .treenode_tool import TreeNodeTool
+from .. import specify_interface
 
 class MassAddStorageNodeTool(TreeNodeTool):
     """

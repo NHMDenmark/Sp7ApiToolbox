@@ -13,8 +13,8 @@
 """
 
 # Internal dependencies
-from models import model
-import models.discipline as discipline
+from ..models import model
+from ..models import discipline as discipline
 
 class Collection(model.Model):
     """

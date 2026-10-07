@@ -16,10 +16,10 @@ import os
 import csv
 
 # Internal Dependencies
-import global_settings as app
-import specify_interface
-import util
-import models.collection as coll
+from .. import global_settings as app
+from .. import specify_interface
+from .. import util
+from ..models import collection as coll
 
 class Sp7ApiTool:
     """

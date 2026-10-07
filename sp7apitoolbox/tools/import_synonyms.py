@@ -12,12 +12,12 @@
   PURPOSE: Tool for merging storage nodes upwards towards their nearest parent 
 """
 
-# Internal Dependencies 
-from tools.treenode_tool import TreeNodeTool
-from models.taxon import Taxon
-import specify_interface
 import traceback
-import util
+
+# Internal Dependencies 
+from .treenode_tool import TreeNodeTool
+from .. import specify_interface
+from .. import util
 
 class ImportSynonymTool(TreeNodeTool):
     """

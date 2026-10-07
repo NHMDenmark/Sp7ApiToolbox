@@ -13,11 +13,11 @@
 """
 
 # Internal Dependencies 
-import specify_interface
-import global_settings as app
-from models.treenode import TreeNode
-from tools.sp7api_tool import Sp7ApiTool
-import util
+from .. import util
+from .. import specify_interface
+from .. import global_settings as app
+from ..models.treenode import TreeNode
+from .sp7api_tool import Sp7ApiTool
 
 class TreeNodeTool(Sp7ApiTool):
     """

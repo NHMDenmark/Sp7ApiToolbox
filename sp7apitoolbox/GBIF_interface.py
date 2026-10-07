@@ -19,9 +19,9 @@ from pathlib import Path
 import urllib.parse
 
 # Internal Dependencies
-import util 
-import global_settings as gs
-from models import taxon
+from . import util 
+from . import global_settings as gs
+from .models import taxon
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

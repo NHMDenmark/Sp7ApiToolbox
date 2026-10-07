@@ -16,8 +16,8 @@ import os
 import sys
 
 # Internal dependencies
-import global_settings as app
-import specify_interface
+from .. import global_settings as app
+from .. import specify_interface
 
 # TODO Explain reason for below code
 current = os.path.dirname(os.path.realpath(__file__))
