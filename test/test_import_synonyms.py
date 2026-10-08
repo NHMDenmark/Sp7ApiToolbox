@@ -1,11 +1,13 @@
 import csv
 import datetime 
-import configuration
-import specify_interface as sp
-from models.treenode import TreeNode
-from models.taxon import Taxon
-import tools.treenode_tool
-import tools.import_synonyms
+
+# Internal Dependencies
+from sp7apitoolbox import configuration
+from sp7apitoolbox import specify_interface as sp
+#from sp7apitoolbox.models.treenode import TreeNode
+from sp7apitoolbox.models.taxon import Taxon
+#from sp7apitoolbox.tools import treenode_tool
+from sp7apitoolbox.tools import import_synonyms
 
 cfg = configuration.ConfigurationHandler()
 cfg.loadConfiguration('unit')
@@ -13,7 +15,7 @@ cfg.loadTools()
 
 spi = sp.SpecifyInterface()
 
-tool = tools.import_synonyms.ImportSynonymTool(spi)
+tool = import_synonyms.ImportSynonymTool(spi)
 
 acc_row = {'Kingdom':'Animalia','Phylum':'Chordata','Class': 'Mammalia', 'Order': 'Carnivora', 'Family': 'Otariidae', 
            'Genus' : 'Eumetopias', 'Species' : 'jubatus', 'SpeciesAuthor' : 'Schreber, 1776',

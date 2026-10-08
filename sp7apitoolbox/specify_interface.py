@@ -12,6 +12,7 @@
   PURPOSE: Interface to the Specify API 
 """
 
+import string
 import time
 import requests # Documentation: https://requests.readthedocs.io/en/latest/api/ 
 import json 
@@ -34,15 +35,18 @@ class SpecifyInterface():
   The initial CSRF token kan be used to subsequently log in using a Specify username/password combination (specifyLogin). 
   """
 
-  def __init__(self, token=None) -> None:
+  def __init__(self, baseURL=None, token=None) -> None:
     """ 
     CONSTRUCTOR
-    Creates a session for storing cookies  
+    Creates a session for storing cookies. 
+    CONTRACT
+      baseURL (String) : The base URL of the Specify7 API to be accessed. If not provided, the default value from global_settings.py is used. 
+      token   (String) : The CSRF token is required for security reasons. It can be provided if already known, otherwise it will be acquired from the API. 
     """      
     self.spSession = requests.Session() 
-    self.csrfToken = ''
+    self.csrfToken = token if token else ''
+    self.baseURL = baseURL if baseURL else app.settings['baseURL']
     self.verifySSL = True
-    self.baseURL = app.settings['baseURL']
 
   def getInitialCollections(self):
     """ 

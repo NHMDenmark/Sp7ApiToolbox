@@ -13,7 +13,7 @@
 """
 
 import os, sys
-from os import system, name
+import subprocess
 from pathlib import Path
 import time
 import logging
@@ -27,12 +27,12 @@ def cls():
     Clear Command Line Interface screen
     """
     # for windows
-    if name == 'nt':
-        _ = system('cls')
+    if sys.platform == 'win32':
+        subprocess.run(['cls'], shell=True)
 
     # for mac and linux
     else:
-        _ = system('clear')
+        subprocess.run(['clear'], shell=True)
 
 
 def buildLogger():  # moduleName):
