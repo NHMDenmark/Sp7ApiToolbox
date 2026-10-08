@@ -57,6 +57,7 @@ class SpecifyInterface():
     util.logger.debug('Get initial collections')
     response = self.spSession.get(self.baseURL + "context/login/", verify=self.verifySSL)
     util.logger.debug(' - Response: ' + str(response.status_code) + " " + response.reason)
+    util.logger.debug(' - Response text: ' + response.text)
     collections = json.loads(response.text)['collections'] # get collections from json string and convert into dictionary
     util.logger.debug(' - Received %d collection(s)' % len(collections))
     util.logger.debug('------------------------------')
