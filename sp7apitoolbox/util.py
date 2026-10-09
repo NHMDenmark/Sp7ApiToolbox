@@ -45,7 +45,7 @@ def buildLogger():  # moduleName):
     logFilePath = str(Path(getLogsPath()).joinpath(logName))
 
     # 2. Set up file handler for logger
-    fileHandler = logging.FileHandler(filename=logFilePath)
+    fileHandler = logging.FileHandler(filename=logFilePath, encoding="utf-8", errors="replace")
     # logFileFormatter = logging.Formatter(fmt=f"%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     logFileFormatter = logging.Formatter(
         '[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', '%m-%d %H:%M:%S')
