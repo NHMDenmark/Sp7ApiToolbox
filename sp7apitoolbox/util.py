@@ -98,12 +98,12 @@ def parseCommandLineArgs():
     return args
 
 
-def logLine(line, level='info', console=False):
+def logLine(line, level='info', console=True):
     """
     Write a line to the log using the logging module initialized.
     CONTRACT
           level (String)   : The logging level to be passed on to the logger.  Default: info. Alternatives: debug, warning & error. 
-          console (String) : Whether the line is to be output to the console/CLI as well. Default: False. 
+          console (String) : Whether the line is to be output to the console/CLI as well. Default: True. 
     """
     if console: print(line)
 
