@@ -64,7 +64,7 @@ def getLogsPath():
     return str(Path(getUserPath()).joinpath('logs'))
 
 
-def getUserPath():
+def getUserPath(app_name="Specify"):
     """
     Get user documents path agnostic of OS or presence of OneDrive setup
     """
@@ -77,7 +77,7 @@ def getUserPath():
         #  because that is where installer creates it:
         oneDrivePath = os.environ['OneDrive']
         # If the full path exists then use the onedrivepath as home path
-        if os.path.exists(str(Path(oneDrivePath).joinpath('Documents').joinpath('DaSSCo'))):
+        if os.path.exists(str(Path(oneDrivePath).joinpath('Documents').joinpath(app_name))):
             homePath = oneDrivePath
 
             # Extend the user home path to point to DaSSCo documents folder
@@ -85,11 +85,27 @@ def getUserPath():
 
     return userPath
 
+def parseCommandLineArgs():
+    """
+    Parse command line arguments and return them as a Namespace object.
+    """
+    import argparse
 
-def logLine(line, level='info'):
+    parser = argparse.ArgumentParser(description="Specify7 API Toolbox")
+    parser.add_argument('--site', type=str, default='', help='Abbreviation of site to be pooled')
+    args = parser.parse_args()
+
+    return args
+
+
+def logLine(line, level='info', console=False):
     """
     Write a line to the log using the logging module initialized.
+    CONTRACT
+          level (String)   : The logging level to be passed on to the logger.  Default: info. Alternatives: debug, warning & error. 
+          console (String) : Whether the line is to be output to the console/CLI as well. Default: False. 
     """
+    if console: print(line)
 
     if (level == 'info'):
         logger.info(line)
@@ -101,7 +117,7 @@ def logLine(line, level='info'):
         logger.error(line)
     else:
         logger.info(line)
-
+    
     return line
 
 

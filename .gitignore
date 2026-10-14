@@ -168,3 +168,5 @@ output/*.*
 config/config.*.json
 data/test/*
 *.bak
+sp7apitoolbox/config/config.localhost.json
+sp7apitoolbox/config/config.NHMD.json
