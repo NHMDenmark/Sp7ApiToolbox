@@ -3,7 +3,8 @@
 PURPOSE: "Who's online" dashboard for Specify 7, built on SpecifyInterface.
 
 Shows one tile per user with activity today (from the spauditlog table),
-sorted by most recent activity. Runs separately from the home screen:
+sorted by most recent activity, plus a status frame for the web asset server.
+Runs separately from the home screen:
 
     pip install flask
     python -m sp7apitoolbox.online_users        (run from the repository root)
@@ -15,27 +16,33 @@ get_credentials() below - this is the one function you may need to adapt).
 """
 import threading
 import time
+from collections import deque
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from click import Path
+import requests
 from flask import Flask, jsonify, render_template_string
 
 # Internal Dependencies
 from sp7apitoolbox import configuration, util
-from sp7apitoolbox import global_settings as app_settings
+from sp7apitoolbox import global_settings as application
 from sp7apitoolbox.specify_interface import SpecifyInterface
 
 # --------------------------------------------------------------------------
 # Settings
 # --------------------------------------------------------------------------
-SERVER_TZ = ZoneInfo("Europe/Copenhagen")                 # time zone Specify stores timestamps in
+SERVER_TZ = ZoneInfo("Europe/Copenhagen")   # time zone Specify stores timestamps in
 DISPLAY_TZ = ZoneInfo("Europe/Copenhagen")  # time zone used for "today" and display
 ACTIVE_MINUTES = 10                         # green tile if activity within this many minutes
 REFRESH_SECONDS = 10                        # browser polling interval
 PORT = 5001
 PAGE_SIZE = 500
 MAX_PAGES = 20
+
+ASSET_SERVER_URL = application.settings['assetURL']
+ASSET_TIMEOUT = 5            # seconds before the asset server counts as down
+ASSET_SLOW_MS = 2000         # amber (slow) above this response time
+ASSET_HISTORY = 30           # number of recent checks shown as the little bar strip
 
 
 class LoginError(Exception):
@@ -46,14 +53,17 @@ class LiveStatusDashboard:
     ACTIONS = {0: "Create", 1: "Update", 2: "Delete", 3: "Tree Merge",
               4: "Tree Move", 5: "Tree Synonymize", 6: "Tree Desynonymize"}
     TABLES = {
-        1: "CollectionObject", 2: "Locality", 4: "Taxon", 5: "Agent", 7: "Accession",
-        8: "Address", 9: "Determination", 10: "CollectingEvent", 30: "Collector",
-        31: "Container", 52: "Loan", 54: "Loan Preparation", 55: "Loan Return Preparation",
-        58: "Storage", 63: "Preparation", 68: "RecordSet", 87: "CollectingTrip",
-        92: "CollectionEventAttribute", 93: "CollectionObjectAttribute",
-        111: "CollObjAttachment", 124: "LocalityDetail", 153: "CollectionObjectProperty",
-        500: "PickList", 501: "PickListItem", 504: "SpLocaleContainerItem",
-        505: "SpLocaleItemString", 514: "SpAppResource", 517: "SpQuery", 518: "SpQueryField",
+        1: "CollectionObject", 2: "Locality", 4: "Taxon", 5: "Agent", 7: "Accession", 8: "Address", 9: "Determination", 
+        10: "CollectingEvent", 12: "Accession Agent", 17: "Author",
+        30: "Collector", 31: "Container", 32: "PaleoContext", 
+        41: "Attachment", 42: "AttachmentMetaData", 
+        52: "Loan", 53: "Loan Agent", 54: "Loan Preparation", 55: "Loan Return Preparation", 58: "Storage", 
+        61: "Other Identifier", 63: "Preparation", 68: "RecordSet", 
+        87: "CollectingTrip", 92: "CollectionEventAttribute", 93: "CollectionObjectAttribute",
+        100: "Lithostratigraphy", 110: "Collecting Event Attachment", 111: "CollObjAttachment", 
+        124: "LocalityDetail", 153: "CollectionObjectProperty",
+        500: "PickList", 501: "PickListItem", 504: "SpLocaleContainerItem", 505: "SpLocaleItemString", 
+        514: "SpAppResource", 517: "SpQuery", 518: "SpQueryField",
     }
 
     PAGE = """<!doctype html>
@@ -75,6 +85,26 @@ class LiveStatusDashboard:
   #banner { display:none; margin:16px 24px 0; padding:12px 16px; border-radius:8px;
             border:1px solid var(--err); color:var(--err); }
   #banner a { color:inherit; font-weight:600; }
+
+  /* Web asset server status frame */
+  #assets { margin:16px 24px 0; background:var(--card); border:1px solid var(--line);
+            border-radius:8px; padding:12px 16px; display:flex; align-items:center;
+            flex-wrap:wrap; gap:8px 24px; }
+  #assets .label { font-weight:600; }
+  #assets .state { display:flex; align-items:center; gap:8px; }
+  #assets .dot { width:12px; height:12px; border-radius:50%; background:var(--grey); flex:none; }
+  #assets.up .dot { background:var(--green); }
+  #assets.slow .dot { background:var(--amber); }
+  #assets.down .dot { background:var(--err); }
+  #assets.down .text { color:var(--err); font-weight:600; }
+  #assets .detail { color:var(--muted); font-size:13px; }
+  #assets a { color:var(--muted); font-size:13px; }
+  #strip { display:flex; gap:2px; align-items:flex-end; height:18px; margin-left:auto; }
+  #strip span { width:5px; height:100%; border-radius:1px; background:var(--grey); opacity:.9; }
+  #strip span.up { background:var(--green); }
+  #strip span.slow { background:var(--amber); }
+  #strip span.down { background:var(--err); }
+
   #tiles { padding:24px; display:grid; gap:16px; grid-template-columns:repeat(4, 1fr); }
   @media (max-width:1000px) { #tiles { grid-template-columns:repeat(2, 1fr); } }
   @media (max-width:560px)  { #tiles { grid-template-columns:1fr; } }
@@ -88,15 +118,27 @@ class LiveStatusDashboard:
   .empty { grid-column:1/-1; text-align:center; color:var(--muted); padding:48px 0; }
 </style></head>
 <body>
-<header><h1>Specify - who's online today</h1><div id="status">Loading...</div></header>
+<header><h1>Specify - who's online today</h1>
+<div id="status">Loading...</div></header>
 <div id="banner"></div>
+
 <main id="tiles"></main>
+
+<section id="assets">
+  <div class="label">Web asset server</div>
+  <div class="state"><span class="dot"></span><span class="text">Checking...</span></div>
+  <div class="detail"></div>
+  <a href="{{ assets_url }}web_asset_store.xml" target="_blank" rel="noopener">open</a>
+  <div id="strip" title="Recent checks, oldest to newest"></div>
+</section>
+
 <script>
 const REFRESH_MS = {{ refresh }} * 1000;
 const SPECIFY_URL = {{ specify_url|tojson }};
 const tiles = document.getElementById('tiles');
 const statusEl = document.getElementById('status');
 const banner = document.getElementById('banner');
+const assets = document.getElementById('assets');
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -142,7 +184,34 @@ async function refresh() {
     statusEl.textContent = data.users.length + ' user(s) today - updated ' + new Date().toLocaleTimeString();
   } catch (e) { showBanner('other', e.message); }
 }
-refresh(); setInterval(refresh, REFRESH_MS);
+
+function renderAssets(d) {
+  assets.className = d.state;
+  assets.querySelector('.text').textContent =
+    d.state === 'down' ? 'Down' : (d.state === 'slow' ? 'Slow' : 'Online');
+  const bits = [];
+  if (d.status_code) bits.push('HTTP ' + d.status_code);
+  if (d.ms != null) bits.push(d.ms + ' ms');
+  if (d.error) bits.push(d.error);
+  bits.push('checked ' + d.time);
+  assets.querySelector('.detail').textContent = bits.join(' - ');
+  const strip = document.getElementById('strip');
+  strip.replaceChildren();
+  for (const h of d.history) strip.append(el('span', h));
+}
+async function refreshAssets() {
+  try {
+    renderAssets(await (await fetch('/api/assets', { cache: 'no-store' })).json());
+  } catch (e) {
+    assets.className = 'down';
+    assets.querySelector('.text').textContent = 'Status unavailable';
+    assets.querySelector('.detail').textContent = 'Dashboard backend not reachable';
+  }
+}
+
+refresh(); refreshAssets();
+setInterval(refresh, REFRESH_MS);
+setInterval(refreshAssets, REFRESH_MS);
 </script></body></html>
 """
 
@@ -150,8 +219,14 @@ refresh(); setInterval(refresh, REFRESH_MS);
         self.agent_names = {}
         self._cache = {"t": 0.0, "payload": None}
         self._lock = threading.Lock()
+        # The asset server check has its own cache and lock so that a slow or hanging
+        # asset server can never delay the user tiles (and vice versa).
+        self._asset_cache = {"t": 0.0, "payload": None}
+        self._asset_lock = threading.Lock()
+        self._asset_history = deque(maxlen=ASSET_HISTORY)
         self.app = Flask(__name__)
         self.app.add_url_rule("/api/online", "online", self.online)
+        self.app.add_url_rule("/api/assets", "assets", self.assets)
         self.app.add_url_rule("/", "index", self.index)
 
         args = util.parseCommandLineArgs()
@@ -165,7 +240,7 @@ refresh(); setInterval(refresh, REFRESH_MS);
         ADAPT THIS to your config file's key names.
         Returns (username, password, collection_id) for the Specify service account.
         """
-        s = app_settings.settings
+        s = application.settings
         return s['username'], s['password'], s['collectionId']
 
     def ensure_login(self, force=False):
@@ -258,6 +333,52 @@ refresh(); setInterval(refresh, REFRESH_MS);
         users.sort(key=lambda u: u["seconds_ago"])
         return users
 
+    def check_asset_server(self):
+        """Ping the web asset server once. Returns a result dict; never raises."""
+        started = time.perf_counter()
+        status_code, error = None, None
+        try:
+            r = requests.get(ASSET_SERVER_URL, timeout=ASSET_TIMEOUT)
+            status_code = r.status_code
+            if r.status_code >= 400:
+                error = r.reason or "error response"
+            elif not r.content:
+                error = "empty response"
+        except requests.exceptions.Timeout:
+            error = f"no response within {ASSET_TIMEOUT} s"
+        except requests.exceptions.SSLError:
+            error = "SSL error"
+        except requests.exceptions.ConnectionError:
+            error = "connection failed"
+        except Exception as e:
+            error = str(e)
+        ms = int((time.perf_counter() - started) * 1000)
+
+        if error:
+            state = "down"
+        elif ms > ASSET_SLOW_MS:
+            state = "slow"
+        else:
+            state = "up"
+
+        self._asset_history.append(state)
+        return {
+            "state": state,
+            "status_code": status_code,
+            "ms": ms if status_code else None,
+            "error": error,
+            "time": datetime.now(DISPLAY_TZ).strftime("%H:%M:%S"),
+            "history": list(self._asset_history),
+        }
+
+    def assets(self):
+        with self._asset_lock:
+            if self._asset_cache["payload"] is None or \
+                    time.time() - self._asset_cache["t"] > REFRESH_SECONDS - 1:
+                self._asset_cache["payload"] = self.check_asset_server()
+                self._asset_cache["t"] = time.time()
+            return jsonify(self._asset_cache["payload"])
+
     def online(self):
         with self._lock:
             if self._cache["payload"] is None or time.time() - self._cache["t"] > REFRESH_SECONDS - 1:
@@ -273,10 +394,13 @@ refresh(); setInterval(refresh, REFRESH_MS);
             return jsonify(self._cache["payload"])
 
     def index(self):
-        return render_template_string(self.PAGE, refresh=REFRESH_SECONDS, specify_url=self.cfg.sp.baseURL)
+        return render_template_string(self.PAGE, refresh=REFRESH_SECONDS,
+                                      specify_url=application.settings['baseURL'],
+                                      assets_url=application.settings['assetURL'])
 
     def run(self):
-        self.app.run(host="127.0.0.1", port=PORT, debug=False)
+        # threaded so the slower asset check never blocks the user tiles request
+        self.app.run(host="127.0.0.1", port=PORT, debug=False, threaded=True)
 
 
 dashboard = LiveStatusDashboard()

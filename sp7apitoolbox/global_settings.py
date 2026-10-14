@@ -13,7 +13,8 @@
 """
 
 settings = {
-    'baseURL': 'https://specify-test2.science.ku.dk/specify/',
+    'baseURL': 'https://sp7demofish.specifycloud.org/',
+    'assetURL': 'https://assets-test.specifycloud.org/',
     'database': {
         'name': 'db',
         'in_memory': False

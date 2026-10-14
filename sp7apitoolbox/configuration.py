@@ -57,6 +57,7 @@ class ConfigurationHandler():
             app.settings['userName'] = config['username']
             app.settings['password'] =  config['password']
             app.settings['csrfToken'] = ''  # CSRF token is empty at this point
+            app.settings['assetURL'] = config['assets_url']
         else:
             raise Exception("Configuration error!") 
                 
