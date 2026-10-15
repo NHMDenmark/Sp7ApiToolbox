@@ -128,7 +128,7 @@ class LiveStatusDashboard:
   <div class="label">Web asset server</div>
   <div class="state"><span class="dot"></span><span class="text">Checking...</span></div>
   <div class="detail"></div>
-  <a href="{{ assets_url }}web_asset_store.xml" target="_blank" rel="noopener">open</a>
+  <a href="{{ assets_url }}" target="_blank" rel="noopener">open</a>
   <div id="strip" title="Recent checks, oldest to newest"></div>
 </section>
 
