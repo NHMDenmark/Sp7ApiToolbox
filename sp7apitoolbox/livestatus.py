@@ -40,7 +40,7 @@ PORT = 5001
 PAGE_SIZE = 500
 MAX_PAGES = 20
 
-ASSET_SERVER_URL = application.settings['assetURL']
+#ASSET_SERVER_URL = application.settings['assetURL']
 ASSET_TIMEOUT = 5            # seconds before the asset server counts as down
 ASSET_SLOW_MS = 2000         # amber (slow) above this response time
 ASSET_HISTORY = 30           # number of recent checks shown as the little bar strip
@@ -339,8 +339,7 @@ setInterval(refreshAssets, REFRESH_MS);
         started = time.perf_counter()
         status_code, error = None, None
         try:
-            r = requests.get(ASSET_SERVER_URL, timeout=ASSET_TIMEOUT,
-                             headers={"Cache-Control": "no-cache"})
+            r = requests.get(application.settings['assetURL'], timeout=ASSET_TIMEOUT, headers={"Cache-Control": "no-cache"})
             status_code = r.status_code
             if r.status_code >= 400:
                 error = r.reason or "error response"
