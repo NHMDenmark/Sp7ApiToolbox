@@ -16,6 +16,7 @@ get_credentials() below - this is the one function you may need to adapt).
 """
 import threading
 import time
+import xml.etree.ElementTree as ET
 from collections import deque
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -338,12 +339,26 @@ setInterval(refreshAssets, REFRESH_MS);
         started = time.perf_counter()
         status_code, error = None, None
         try:
-            r = requests.get(ASSET_SERVER_URL, timeout=ASSET_TIMEOUT)
+            r = requests.get(ASSET_SERVER_URL, timeout=ASSET_TIMEOUT,
+                             headers={"Cache-Control": "no-cache"})
             status_code = r.status_code
             if r.status_code >= 400:
                 error = r.reason or "error response"
-            elif not r.content:
+            elif not r.content.strip():
                 error = "empty response"
+            else:
+                # A proxy can answer 200 with an error text or HTML page in the body,
+                # so the body must be well-formed XML and not an (X)HTML page.
+                try:
+                    root = ET.fromstring(r.content)
+                    if "html" in root.tag.lower():
+                        error = "HTML page instead of XML"
+                except ET.ParseError:
+                    snippet = " ".join(r.text.split())[:80]
+                    error = f"not valid XML: {snippet}"
+            if error:
+                util.logger.error(f"Web asset server check: HTTP {status_code}, "
+                                  f"{error}, content-type={r.headers.get('Content-Type')}")
         except requests.exceptions.Timeout:
             error = f"no response within {ASSET_TIMEOUT} s"
         except requests.exceptions.SSLError:
